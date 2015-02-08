@@ -4,5 +4,5 @@ The purpose of this package is to allow the plotting of gain patterns. It is ass
 
 For now, I will simply plot using PGFPlots, but in the future, I might add PyPlot and allow the user to choose.
 
-## This came default with the package when I made it. Not sure what to do with it.
+This came default with the package when I made it. Not sure what to do with it.
 [![Build Status](https://travis-ci.org/dressel/GainPatterns.jl.svg?branch=master)](https://travis-ci.org/dressel/GainPatterns.jl)
