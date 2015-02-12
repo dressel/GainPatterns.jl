@@ -1,7 +1,8 @@
 module GainPatterns
 
 # package code goes here
-export normalize, normalize!, sampleGains, crosscorrelate
+export normalize, normalize!, sampleGains, crosscorrelate, plotgains
+import PGFPlots: PolarAxis, Plots, save
 
 # Returns a normalized distribution
 # This normalization was shown in Graefenstein 2009
@@ -68,6 +69,41 @@ function cc_helper(shift, ref, sample, angles)
 		i += 1
 	end
 	return c
+end
+
+
+# Plots gains and angles
+function plotgains(angles::Vector{Float64}, gains::Vector{Float64})
+
+	# Make copies before we make some changes
+	plot_gains = copy(gains)
+	plot_angles = copy(angles)
+
+	# First, we must handle negatives in gains
+	labelgain = 0
+	mingain = minimum(gains)
+	if mingain < 0
+		# If negative gains, add this to gains...
+		# This does not mess with the gains passed in
+		plot_gains -= mingain
+		labelgain = mingain
+	end
+
+	# Last point must be same as first point to complete the plot
+	# If not, it will be missing a section between last point and first
+	if angles[1] != angles[end]
+		push!(plot_angles, plot_angles[1])
+		push!(plot_gains, plot_gains[1])
+	end
+
+	# Finally create the plot
+	# TODO: Add yticklabel stuff to make it good
+	p = Plots.Linear(plot_angles, plot_gains, mark="none")
+	pa = PolarAxis(p)
+
+	# Save to a pdf file...
+	# TODO: give user option to specify this...
+	save("temp.pdf", pa)
 end
 
 end # module

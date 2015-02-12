@@ -9,6 +9,8 @@ The purpose of this package is to allow the plotting of gain patterns. It is ass
 
 `crosscorrelate(ref, sample, angles)` performs a cross-correlation of the sample and a reference signal. The idea is that the reference is of length 360, and the sample can be of variable length. `angles` is a vector of the angles at which `sample` was sampled.
 
+`plotgains(angles::Vector{Float64}, gains::Vector{Float64})` saves a plot of the given gains to a pdf file named temp.pdf in the current directory.
+
 ## Near-Term Plans
 This is currently still very rough. Some things I want to add:
 * Better/more documentation
