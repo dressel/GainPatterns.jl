@@ -99,7 +99,7 @@ function plotgains(angles::Vector{Float64}, gains::Vector{Float64})
 	# Finally create the plot
 	# TODO: Add yticklabel stuff to make it good
 	p = Plots.Linear(plot_angles, plot_gains, mark="none")
-	pa = PolarAxis(p)
+	pa = PolarAxis(p, yticklabel="{\\pgfmathparse{$labelgain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
 
 	# Save to a pdf file...
 	# TODO: give user option to specify this...
