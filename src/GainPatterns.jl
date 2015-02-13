@@ -2,8 +2,8 @@ module GainPatterns
 
 # package code goes here
 export normalize, normalize!, sampleGains, crosscorrelate, plotgains
-export PolarAxis, save
-import PGFPlots: PolarAxis, Plots, save
+export PolarAxis, save, Axis
+import PGFPlots: PolarAxis, Plots, save, Axis
 
 # Returns a normalized distribution
 # This normalization was shown in Graefenstein 2009
@@ -79,25 +79,21 @@ end
 #
 # ymin = minimum y (gain or radial) value. If it is positive, it is ignored.
 #  If it is less than the minimum value of gains, also ignored.
+# 
+# TODO: Test the mingain stuff, including the default
 function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}, ymin::Real)
 
 	# Make copies before we make some changes
 	plot_gains = copy(gains)
 	plot_angles = copy(angles)
 
-	# First, we must handle negatives in gains
-	labelgain = 0.
-
+	# Set mingain to minimum(ymin, minimum(gains), 0)
 	mingain = minimum(gains)
-	if ymin < mingain
-		mingain = ymin
-	end
-	if mingain < 0
-		# If negative gains, add this to gains...
-		# This does not mess with the gains passed in
-		plot_gains -= mingain
-		labelgain = mingain
-	end
+	mingain = (ymin < mingain ? ymin : mingain)
+	mingain = (mingain > 0. ? 0. : mingain)
+
+	# Shift the plotgains by mingain
+	plot_gains -= mingain
 
 	# Last point must be same as first point to complete the plot
 	# If not, it will be missing a section between last point and first
@@ -107,18 +103,68 @@ function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}, ymi
 	end
 
 	# Finally create the plot
-	# TODO: Add yticklabel stuff to make it good
-	p = Plots.Linear(plot_angles, plot_gains, mark="none")
-	pa = PolarAxis(p, yticklabel="{\\pgfmathparse{$labelgain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
-
-	# Save to a pdf file...
-	# TODO: give user option to specify this...
-	#save("temp.pdf", pa)
+	p = Plots.Linear(plot_angles, plot_gains, mark="none", style="red,thick")
+	pa = PolarAxis(p, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
 end
 
 # Allow gains to be plotted without specifying minimum gain
 function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2})
 	plotgains(angles, gains, minimum(gains))
+end
+
+# Plots errors and stuff
+# User passes in a matrix.
+# Each row corresponds to the measurements for a specific angle.
+function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Matrix{T2}, ymin::Real)
+
+	# Number of angles, number of samples per angle comes up often
+	nangles = size(gains, 1)
+	nsamples = size(gains, 2)
+
+	# Find the means and make a copy of the angles
+	meangains = reshape(mean(gains,2), nangles)
+	plot_angles = copy(angles)
+
+	# Create vector of linear plots
+	# One for each angle plus one for all of them
+	plot_array = Array(Plots.Linear, nangles + 1)
+
+	# Once the means are found, determine absolute smallest gain
+	# Set mingain to minimum(ymin, minimum(gains), 0)
+	mingain = minimum(gains)
+	mingain = (ymin < mingain ? ymin : mingain)
+	mingain = (mingain > 0. ? 0. : mingain)
+
+	# Shift all gains by this...
+	meangains -= mingain
+
+	# Last point must be same as first point to complete the plot
+	# If not, it will be missing a section between last point and first
+	if angles[1] != angles[end]
+		push!(plot_angles, plot_angles[1])
+		push!(meangains, meangains[1])
+	end
+
+	# Finally create the plot
+	plot_array[1] = Plots.Linear(plot_angles, meangains, mark="none", style="red, thick, solid")
+	p = plot_array[1]
+
+	# Plot all the errors...
+	for i = 1:length(angles)
+		plot_array[i+1] = Plots.Linear(angles[i] * ones(nsamples), reshape(gains[i,:], nsamples)-mingain, mark="x", style="blue,smooth")
+	end
+
+	# Finally, create the polar axis
+	pa = PolarAxis(plot_array, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
+	#pa = PolarAxis(p, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
+end
+
+function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Matrix{T2})
+	plotgains(angles, gains, minimum(gains))
+end
+
+function plot_error{T<:Real}(gains::Vector{T}, angle::Real)
+	p = Plots.Linear(angle*ones(length(gains)), gains)
 end
 
 end # module

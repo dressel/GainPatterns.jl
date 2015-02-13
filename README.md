@@ -13,6 +13,10 @@ The purpose of this package is to allow the plotting of gain patterns. It is ass
 
 `plotgains(angles::Vector{Real}, gains::Vector{Real}, ymin::Real)` is the same as above, except it allows you to specify a minimum y (radial) value.
 
+`plotgains(angles::Vector{Real}, gains::Matrix{Real}, ymin::Real)` plots errors along the radial direction. Each row in gains corresponds to a specific angle. The values of the columns correspond to different samples taken at that angle.
+
+`plotgains(angles::Vector{Real}, gains::Matrix{Real}, ymin::Real)` is the same as above, except it allows you to specify a minimum y (radial) value.
+
 ## Example Usage
 ```
 angles = [0:360]
