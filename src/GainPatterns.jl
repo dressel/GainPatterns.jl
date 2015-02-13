@@ -2,6 +2,7 @@ module GainPatterns
 
 # package code goes here
 export normalize, normalize!, sampleGains, crosscorrelate, plotgains
+export PolarAxis, save
 import PGFPlots: PolarAxis, Plots, save
 
 # Returns a normalized distribution
@@ -72,16 +73,25 @@ function cc_helper(shift, ref, sample, angles)
 end
 
 
-# Plots gains and angles
-function plotgains(angles::Vector{Float64}, gains::Vector{Float64})
+# Plots gains and angles on a polar plot.
+# Can handle negative values, which radial plots normally cannot.
+# Saves the plot to temp.pdf
+#
+# ymin = minimum y (gain or radial) value. If it is positive, it is ignored.
+#  If it is less than the minimum value of gains, also ignored.
+function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}, ymin::Real)
 
 	# Make copies before we make some changes
 	plot_gains = copy(gains)
 	plot_angles = copy(angles)
 
 	# First, we must handle negatives in gains
-	labelgain = 0
+	labelgain = 0.
+
 	mingain = minimum(gains)
+	if ymin < mingain
+		mingain = ymin
+	end
 	if mingain < 0
 		# If negative gains, add this to gains...
 		# This does not mess with the gains passed in
@@ -103,7 +113,12 @@ function plotgains(angles::Vector{Float64}, gains::Vector{Float64})
 
 	# Save to a pdf file...
 	# TODO: give user option to specify this...
-	save("temp.pdf", pa)
+	#save("temp.pdf", pa)
+end
+
+# Allow gains to be plotted without specifying minimum gain
+function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2})
+	plotgains(angles, gains, minimum(gains))
 end
 
 end # module
