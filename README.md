@@ -34,16 +34,18 @@ save("plot2.pdf", p)
 
 ## Near-Term Plans
 This is currently still very rough. Some things I want to add:
-* Pictures of output/Julia notebook with examples
+* ~~Create a GainPattern type~~ done!
+* ~~Allow creation of said type through a text or csv file~~ done!
+* Julia notebook with examples
+* make ymin work for plot
 * Make plots show up immediately (this is a PGFPlots issue)
-* Maybe create a GainPattern type?
-* Allow creation of said type through a text or csv file
+* Test `validgain` function and over-writing it
 
 ## Future Plans
 Future plans (like way down the road):
 * Allow the use of PyPlot as well as PGFPlots
 * Read in an image of a gain pattern and spit out the resulting values (a bit quixotic, but I suppose it is doable).
-* Generate gain patterns for simple antennas. I do not currently have the expertise to make that happen.
+* Generate gain patterns for simple antennas. I do not currently have the knowledge to make that happen.
 
 ## Build Status
 This came default with the package when I made it. Not sure what to do with it or what it does.
