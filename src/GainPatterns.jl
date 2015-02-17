@@ -95,24 +95,30 @@ end
 
 # Returns a normalized distribution
 # This normalization was shown in Graefenstein 2009
-function normalize(gains::Vector{Float64})
-	newGains = Array(Float64, size(gains))
-	return normalize!(gains)
+# Creates a copy of the gains then calls the in-place version
+function normalize{T<:Real}(gains::Vector{T})
+	new_gains = float(gains)	# create copy of gains, while ensuring float
+	normalize!(new_gains)
+	return new_gains
 end
 
 # In place version of the above.
 function normalize!(gains::Vector{Float64})
+
+	# Calculate mean, std deviation, and vector length
 	m = mean(gains)
 	s = std(gains)
 	l = length(gains)
+
+	# Perform the normalization
 	for i = 1:l
 		gains[i] = (gains[i] - m) / s
 	end
-	return gains
 end
 
 # Sample from a given distribution of gains
 # Returns the gains sampled, and the angles at which these samples occurred
+# TODO: Look into this, see if it is still working
 function sampleGains(gains, step::Int64, bearing::Int64)
 
 	noise = 0.25*randn(360)
