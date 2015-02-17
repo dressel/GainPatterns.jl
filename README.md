@@ -36,10 +36,11 @@ save("plot2.pdf", p)
 This is currently still very rough. Some things I want to add:
 * ~~Create a GainPattern type~~ done!
 * ~~Allow creation of said type through a text or csv file~~ done!
-* Julia notebook with examples
+* Overhaul documentation and create Julia notebook with examples
 * ~~make ymin work for plot~~ done!
 * Check that gp.samples exists in plot if showsamples is selected
-* Allow log-log plotting
+* Create shift! and flip! functions (for angles...)
+* Allow log-axis for gains
 * Make plots show up immediately (this is a PGFPlots issue)
 * Test `validgain` function and over-writing it
 
