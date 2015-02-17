@@ -2,7 +2,7 @@ module GainPatterns
 
 # package code goes here
 export GainPattern, validgain, plot
-export normalize, normalize!, sampleGains, crosscorrelate, plotgains
+export normalize, normalize!, sampleGains, crosscorrelate
 export PolarAxis, save, Axis
 import PGFPlots: PolarAxis, Plots, save, Axis
 
@@ -162,31 +162,56 @@ end
 
 
 # Allows plotting with gain pattern
-function plot(gp::GainPattern; ymin = 0.0)
-	plotgains(gp.angles, gp.meangains)
+function plot(gp::GainPattern; ymin = 0.0, showsamples::Bool=false)
+
+	n_angles = length(gp.angles)
+	mingain = minimum(gp.meangains)
+
+	# TODO: check that samples exists
+	if showsamples
+		# Plot showing the samples...
+		# First we need to determine the mean gain...
+
+		# Once the means are found, determine absolute smallest gain
+		# Set mingain to minimum(ymin, minimum(gains), 0)
+		# Loop through all samples...
+		# TODO: Really, mingain should be called ymin. Clean that up
+		for i = 1:n_angles
+			tempmin = minimum(gp.samples[i])
+			mingain = (tempmin < mingain ? tempmin : mingain)
+		end
+		mingain = (ymin < mingain ? ymin : mingain)
+		mingain = (mingain > 0. ? 0. : mingain)
+
+		gain_plot = plotgains(gp.angles, gp.meangains, mingain)
+		plot_array = plotsamples(gp.angles, gp.samples, mingain)
+		push!(plot_array, gain_plot)
+		pa = PolarAxis(plot_array, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
+
+	else
+		# Determine the min gain...
+		mingain = (ymin < mingain ? ymin : mingain)
+		mingain = (mingain > 0. ? 0. : mingain)
+
+		gain_plot = plotgains(gp.angles, gp.meangains, mingain)
+		pa = PolarAxis(gain_plot, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
+	end
+
+	return pa
+
 end
 
-# Plots gains and angles on a polar plot.
+# Creates Plots.Linear object (from PGFPlots) with gains vs angles
 # Can handle negative values, which radial plots normally cannot.
-# Saves the plot to temp.pdf
 #
 # ymin = minimum y (gain or radial) value. If it is positive, it is ignored.
 #  If it is less than the minimum value of gains, also ignored.
-# 
-# TODO: Test the mingain stuff, including the default
 function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}, ymin::Real)
 
 	# Make copies before we make some changes
-	plot_gains = copy(gains)
+	# Remember to shift gains by the minimum value to be plotted
+	plot_gains = copy(gains) - ymin
 	plot_angles = copy(angles)
-
-	# Set mingain to minimum(ymin, minimum(gains), 0)
-	mingain = minimum(gains)
-	mingain = (ymin < mingain ? ymin : mingain)
-	mingain = (mingain > 0. ? 0. : mingain)
-
-	# Shift the plotgains by mingain
-	plot_gains -= mingain
 
 	# Last point must be same as first point to complete the plot
 	# If not, it will be missing a section between last point and first
@@ -195,69 +220,25 @@ function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}, ymi
 		push!(plot_gains, plot_gains[1])
 	end
 
-	# Finally create the plot
-	p = Plots.Linear(plot_angles, plot_gains, mark="none", style="red,thick")
-	pa = PolarAxis(p, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
+	# Create a linear plot and return it
+	return Plots.Linear(plot_angles, plot_gains, mark="none", style="red,thick")
 end
 
-# Allow gains to be plotted without specifying minimum gain
-function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2})
-	plotgains(angles, gains, minimum(gains))
-end
+# Returns an array of plots
+function plotsamples{T1<:Real,T2<:Real}(angles::Vector{T1}, samples::Vector{Vector{T2}}, ymin::Real)
 
-# Plots errors and stuff
-# User passes in a matrix.
-# Each row corresponds to the measurements for a specific angle.
-function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Matrix{T2}, ymin::Real)
+	# Create an array of plots
+	num_angles = length(angles)
+	plot_array = Array(Plots.Linear, num_angles)
 
-	# Number of angles, number of samples per angle comes up often
-	nangles = size(gains, 1)
-	nsamples = size(gains, 2)
-
-	# Find the means and make a copy of the angles
-	meangains = reshape(mean(gains,2), nangles)
-	plot_angles = copy(angles)
-
-	# Create vector of linear plots
-	# One for each angle plus one for all of them
-	plot_array = Array(Plots.Linear, nangles + 1)
-
-	# Once the means are found, determine absolute smallest gain
-	# Set mingain to minimum(ymin, minimum(gains), 0)
-	mingain = minimum(gains)
-	mingain = (ymin < mingain ? ymin : mingain)
-	mingain = (mingain > 0. ? 0. : mingain)
-
-	# Shift all gains by this...
-	meangains -= mingain
-
-	# Last point must be same as first point to complete the plot
-	# If not, it will be missing a section between last point and first
-	if angles[1] != angles[end]
-		push!(plot_angles, plot_angles[1])
-		push!(meangains, meangains[1])
+	# Create a linear plot for each sample
+	for i = 1:num_angles
+		plot_array[i] = Plots.Linear(angles[i]*ones(length(samples[i])), samples[i]-ymin, mark="x", style="blue,smooth")
 	end
 
-	# Finally create the plot
-	plot_array[1] = Plots.Linear(plot_angles, meangains, mark="none", style="red, thick, solid")
-	p = plot_array[1]
-
-	# Plot all the errors...
-	for i = 1:length(angles)
-		plot_array[i+1] = Plots.Linear(angles[i] * ones(nsamples), reshape(gains[i,:], nsamples)-mingain, mark="x", style="blue,smooth")
-	end
-
-	# Finally, create the polar axis
-	pa = PolarAxis(plot_array, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
-	#pa = PolarAxis(p, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
+	# Return the array of plots
+	return plot_array
 end
 
-function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Matrix{T2})
-	plotgains(angles, gains, minimum(gains))
-end
-
-function plot_error{T<:Real}(gains::Vector{T}, angle::Real)
-	p = Plots.Linear(angle*ones(length(gains)), gains)
-end
 
 end # module
