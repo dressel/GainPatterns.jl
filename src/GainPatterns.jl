@@ -1,7 +1,7 @@
 module GainPatterns
 
 # package code goes here
-export GainPattern, validgain, plot
+export GainPattern, validgain, plot, rotate!
 export normalize, normalize!, sampleGains, crosscorrelate
 export PolarAxis, save, Axis
 import PGFPlots: PolarAxis, Plots, save, Axis
@@ -115,6 +115,19 @@ function normalize!(gains::Vector{Float64})
 		gains[i] = (gains[i] - m) / s
 	end
 end
+
+# TODO: Normalize function that takes in gain pattern
+#  How do we normalize both the means and the samples?
+#  Do we just use the means and std deviations of the meangains vector?
+
+# Rotates the gain pattern by a specified number of degrees
+# We must also call mod so the degrees stay in the proper range
+function rotate!(gp::GainPattern, degrees::Real)
+	for i = 1:length(gp.angles)
+		gp.angles[i] = mod(gp.angles[i] + degrees, 360)
+	end
+end
+
 
 # Sample from a given distribution of gains
 # Returns the gains sampled, and the angles at which these samples occurred
