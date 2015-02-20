@@ -25,6 +25,7 @@ type GainPattern
 
 	# Allow user to input matrix
 	# Makes no assumption about the validity of all the inputs
+	# TODO: make use of the refine function
 	function GainPattern{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Matrix{T2})
 
 		# Determine number of angles and samples we are looking at
@@ -65,24 +66,47 @@ type GainPattern
 		return new(angles, meangains, gains)
 	end
 
+	# Create gain pattern from samples
+	# First, we refine the samples (remove invalid entries, compute mean)
+	# Then, just call the default constructor
+	function GainPattern{T1<:Real,T2<:Real}(angles::Vector{T1}, samples::Vector{Vector{T2}})
+		meangains, refined_samples = refine(samples)
+		return new(angles, meangains, refined_samples)
+	end
+
 	# Create gain pattern from csv file
 	# Assumes first column is angles
 	# This cuts out any null observations..
 	function GainPattern(datafile::String)
 
-		# Read the data
+		# Read the data, creating the angles vector and an array of data
 		alldata = readcsv(datafile)
 		angles = float(alldata[:, 1])
-		gains = float(alldata[:, 2:end])
+		gains = alldata[:, 2:end]
 
-		# Call the constructor we all know and love
-		return GainPattern(angles, gains)
+		# Create a vector containing samples
+		num_angles = length(angles)
+		samples = Array(Vector{Float64}, num_angles)
+
+		# Create a vector for each sample from the matrix of data
+		# If some angles have fewer samples, we will have empty quotes, ""
+		# We assume that these are after the actual samples
+		for i = 1:num_angles
+			tempvec = vec(gains[i,:])
+			while tempvec[end] == ""
+				pop!(tempvec)
+			end
+			samples[i] = tempvec
+		end
+
+		# Call the constructor 
+		return GainPattern(angles, samples)
 	end
 
 end # type GainPattern
 
 
-# Function determining if gain value is real
+# Determes if gain value is real
 # The idea is that the user could over write this
 function validgain(gain::Real)
 	nullobs = 2147483647.
@@ -92,6 +116,38 @@ function validgain(gain::Real)
 		return false
 	end
 end
+
+
+# Eliminates any invalid gain values, and computes the mean
+# Returns vector with means, and new vector with samples
+function refine(samples::Vector{Vector{Float64}})
+
+	# Calculate number of angles and create required data structures
+	num_angles = length(samples)
+	refined_samples = Array(Vector{Float64}, num_angles)
+	meangains = Array(Float64, num_angles)
+
+	# Loop through all sample vectors, 
+	#  eliminating invalid gain values and calculating the mean
+	for i = 1:num_angles
+		refined_samples[i] = Array(Float64, 0)
+		rowavg = 0.0
+		numvalid = 0
+		num_samples = length(samples[i])
+		for j = 1:num_samples
+			tempgain = samples[i][j]
+			if validgain(tempgain)
+				rowavg += tempgain
+				numvalid += 1
+				push!(refined_samples[i], tempgain)
+			end
+		end
+		meangains[i] = rowavg / numvalid
+	end
+
+	return meangains, refined_samples
+end
+
 
 # Returns a normalized distribution
 # This normalization was shown in Graefenstein 2009
