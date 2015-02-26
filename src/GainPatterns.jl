@@ -237,14 +237,32 @@ end
 
 
 # Returns the PolarAxis object containing a plot of the gain pattern
+# TODO: Make this decision...
+#  maybe plotting a single gp could be its own function, that allows plotting samples
+#  plotting multiple might disallow plotting samples
+#  I just don't know if you'd ever want to plot samples with many plots.
+#  It would look shitty and I'd have to handle the colors
 function plot(gp::GainPattern; ymin::Real=0.0, ymax=nothing, plotsamples::Bool=false)
+	plot([gp], ymin, ymax, plotsamples)
+end
+function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, plotsamples::Bool=false)
 
-	# TODO: check that ymax > ymin
-	# TODO: default ymin to -inf instead
-	# But, make sure if user picks value
+	#n_angles = length(gp.angles)
+	#mingain = minimum(gp.meangains)
 
-	n_angles = length(gp.angles)
-	mingain = minimum(gp.meangains)
+	# need array of n_angles
+	# need array of mingains
+	num_gp = length(gp_array)
+	mingain_array = zeros(num_gp)
+	nangles_array = zeros(Int, num_gp)
+	for i = 1:num_gp
+		nangles_array[i] = length(gp_array[i].angles)
+		mingain_array[i] = minimum(gp_array[i].meangains)
+	end
+
+	mingain = minimum(mingain_array)
+
+
 
 	# TODO: check that samples exists
 	if plotsamples
@@ -272,16 +290,23 @@ function plot(gp::GainPattern; ymin::Real=0.0, ymax=nothing, plotsamples::Bool=f
 		pa = PolarAxis(plot_array, ymax=ymax, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
 
 	else
-		# Determine the min gain...
-		mingain = (ymin < mingain ? ymin : mingain)
-		mingain = (mingain > 0. ? 0. : mingain)
 
-		gain_plot = plotgains(gp.angles, gp.meangains, mingain)
+		plot_array = Array(Plots.Linear, num_gp)
+		for i = 1:num_gp
+			gp = gp_array[i]
 
-		# If user specified a ymax, do something about it
-		# TODO: Check that ymax is not less than ymin.
-		ymax = ( typeof(ymax) == Nothing ? nothing : (ymax-mingain) )
-		pa = PolarAxis(gain_plot, ymax=ymax, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
+			# Determine the min gain...
+			mingain = (ymin < mingain ? ymin : mingain)
+			mingain = (mingain > 0. ? 0. : mingain)
+
+			plot_array[i] = plotgains(gp.angles, gp.meangains, mingain)
+
+			# If user specified a ymax, do something about it
+			# TODO: Check that ymax is not less than ymin.
+			ymax = ( typeof(ymax) == Nothing ? nothing : (ymax-mingain) )
+		end
+
+		pa = PolarAxis(plot_array, ymax=ymax, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
 	end
 
 	# Return the polar axis object
@@ -309,7 +334,8 @@ function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}, ymi
 	end
 
 	# Create a linear plot and return it
-	return Plots.Linear(plot_angles, plot_gains, mark="none", style="red,thick")
+	#return Plots.Linear(plot_angles, plot_gains, mark="none", style="red,thick")
+	return Plots.Linear(plot_angles, plot_gains, mark="none", style="thick")
 end
 
 # Returns an array of plots
