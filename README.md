@@ -38,7 +38,7 @@ This is currently still very rough. Some things I want to add:
 * ~~Allow creation of said type through a text or csv file~~ done!
 * Overhaul documentation and create Julia notebook with examples
 * ~~make ymin work for plot~~ done!
-* Check that gp.samples exists in plot if showsamples is selected
+* Create subtraction
 * Create shift! and flip! functions (for angles...)
 * Allow log-axis for gains
 * Make plots show up immediately (this is a PGFPlots issue)

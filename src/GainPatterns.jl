@@ -16,16 +16,31 @@ type GainPattern
 	meangains::Vector{Float64}
 	samples::Vector{Vector{Float64}}
 
-	# Default constructor
-	# TODO: Create a real default... for all three to be specified
-	GainPattern(angles::Vector{Float64}, gains::Vector{Float64}) = new(angles, gains)
 
-	# Allow vectors of any reals to work
-	GainPattern{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}) = new(float(angles), float(gains))
+	# Constructor where user passes in angles and mean gains
+	# The samples array uses the single gain at each angle as that gain
+	function GainPattern(angles::Vector{Float64}, gains::Vector{Float64})
+
+		# Create samples vectors from gains
+		num_gains = length(gains)
+		samples = Array(Vector{Float64}, num_gains)
+		for i = 1:num_gains
+			samples[i] = [gains[i]]
+		end
+
+		# Return
+		new(angles, gains, samples)
+	end
+
+	# Constructor taking in only angles and mean gains
+	# Allows vectors of type real, and converts to float arrays
+	function GainPattern{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2})
+		GainPattern(float(angles), float(gains))
+	end
 
 	# Allow user to input matrix
 	# Makes no assumption about the validity of all the inputs
-	# TODO: make use of the refine function
+	# TODO: Make use of the refine function
 	function GainPattern{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Matrix{T2})
 
 		# Determine number of angles and samples we are looking at
@@ -55,14 +70,19 @@ type GainPattern
 		return new(angles, meangains, samples)
 	end
 
-	# Makes the assumption that all of these entries are valid
+	# Constructor using the angles and a vector of samples for each angles
+	# Computes the mean of each of these samples
+	# TODO: Should I check if the gains are valid?
 	function GainPattern{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{Vector{T2}})
-		n_angles = length(angles)
-		meangains = Array(Float64, n_angles)
-		for i = 1:n_angles
+
+		# Compute the mean of each vector of samples
+		num_angles = length(angles)
+		meangains = Array(Float64, num_angles)
+		for i = 1:num_angles
 			meangains[i] = mean(gains[i])
 		end
 
+		# Return new gain pattern with the given angles, means, and samples
 		return new(angles, meangains, gains)
 	end
 
@@ -106,15 +126,14 @@ type GainPattern
 end # type GainPattern
 
 
-# Determes if gain value is real
-# The idea is that the user could over write this
+
+# Determes if gain value is valid
+# In my research, I receive a value of 2147483647 if the gain is invalid
+# If this is the value of the gain, I know it is not valid
+# The user can override this to meet their own data needs
 function validgain(gain::Real)
 	nullobs = 2147483647.
-	if gain != nullobs
-		return true
-	else
-		return false
-	end
+	gain == nullobs ? false : true
 end
 
 
@@ -158,6 +177,7 @@ function normalize{T<:Real}(gains::Vector{T})
 	return new_gains
 end
 
+
 # In place version of the above.
 function normalize!(gains::Vector{Float64})
 
@@ -171,6 +191,7 @@ function normalize!(gains::Vector{Float64})
 		gains[i] = (gains[i] - m) / s
 	end
 end
+
 
 # TODO: Normalize function that takes in gain pattern
 #  How do we normalize both the means and the samples?
