@@ -21,15 +21,17 @@ The purpose of this package is to allow the plotting of gain patterns. It is ass
 ```
 angles = [0:360]
 gains = float(cosd(angles))   # returns array of type any sometimes??
-p = plotgains(angles, gains)
-save("plot1.pdf", p)
+gp = GainPattern(angles, gains)
+axis = plot(gp)
+save("plot1.pdf", axis)
 ```
 Now say you want to make the minimum y (radial) value -2, and not -1. You can specify this:
 ```
 angles = [0:360]
 gains = float(cosd(angles))   # returns array of type any sometimes??
-p = plotgains(angles, gains, -2)
-save("plot2.pdf", p)
+gp = GainPattern(angles, gains)
+axis = plot(gp, ymin=-2)
+save("plot2.pdf", axis)
 ```
 
 ## Near-Term Plans
