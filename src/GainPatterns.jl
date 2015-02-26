@@ -236,14 +236,18 @@ function cc_helper(shift, ref, sample, angles)
 end
 
 
-# Allows plotting with gain pattern
-function plot(gp::GainPattern; ymin = 0.0, showsamples::Bool=false)
+# Returns the PolarAxis object containing a plot of the gain pattern
+function plot(gp::GainPattern; ymin::Real=0.0, ymax=nothing, plotsamples::Bool=false)
+
+	# TODO: check that ymax > ymin
+	# TODO: default ymin to -inf instead
+	# But, make sure if user picks value
 
 	n_angles = length(gp.angles)
 	mingain = minimum(gp.meangains)
 
 	# TODO: check that samples exists
-	if showsamples
+	if plotsamples
 		# Plot showing the samples...
 		# First we need to determine the mean gain...
 
@@ -258,10 +262,14 @@ function plot(gp::GainPattern; ymin = 0.0, showsamples::Bool=false)
 		mingain = (ymin < mingain ? ymin : mingain)
 		mingain = (mingain > 0. ? 0. : mingain)
 
+		# Determine ymax
+		# TODO: Check that ymax is not less than ymin.
+		ymax = ( typeof(ymax) == Nothing ? nothing : (ymax-mingain) )
+
 		gain_plot = plotgains(gp.angles, gp.meangains, mingain)
 		plot_array = plotsamples(gp.angles, gp.samples, mingain)
 		push!(plot_array, gain_plot)
-		pa = PolarAxis(plot_array, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
+		pa = PolarAxis(plot_array, ymax=ymax, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
 
 	else
 		# Determine the min gain...
@@ -269,9 +277,14 @@ function plot(gp::GainPattern; ymin = 0.0, showsamples::Bool=false)
 		mingain = (mingain > 0. ? 0. : mingain)
 
 		gain_plot = plotgains(gp.angles, gp.meangains, mingain)
-		pa = PolarAxis(gain_plot, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
+
+		# If user specified a ymax, do something about it
+		# TODO: Check that ymax is not less than ymin.
+		ymax = ( typeof(ymax) == Nothing ? nothing : (ymax-mingain) )
+		pa = PolarAxis(gain_plot, ymax=ymax, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
 	end
 
+	# Return the polar axis object
 	return pa
 
 end
