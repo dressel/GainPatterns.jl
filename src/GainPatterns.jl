@@ -366,13 +366,12 @@ end
 function plot(gp::GainPattern; ymin::Real=0.0, ymax=nothing, plotsamples::Bool=false)
 	plot([gp], ymin=ymin, ymax=ymax, plotsamples=plotsamples)
 end
+
 function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, plotsamples::Bool=false)
 
-	#n_angles = length(gp.angles)
-	#mingain = minimum(gp.meangains)
-
-	# need array of n_angles
-	# need array of mingains
+	# Create an array with length of angles for each gain pattern
+	# Create an array with minimum mean gain for each pattern
+	# Initialize the minimum_gain to the lowest of these minimum gains
 	num_gp = length(gp_array)
 	mingain_array = zeros(num_gp)
 	nangles_array = zeros(Int, num_gp)
@@ -380,12 +379,8 @@ function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, plots
 		nangles_array[i] = length(gp_array[i].angles)
 		mingain_array[i] = minimum(gp_array[i].meangains)
 	end
-
 	mingain = minimum(mingain_array)
 
-
-
-	# TODO: check that samples exists
 	if plotsamples
 		# Plot showing the samples...
 		# First we need to determine the mean gain...
@@ -393,41 +388,31 @@ function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, plots
 		# Once the means are found, determine absolute smallest gain
 		# Set mingain to minimum(ymin, minimum(gains), 0)
 		# Loop through all samples...
-		# TODO: Really, mingain should be called ymin. Clean that up
 		for i = 1:n_angles
 			tempmin = minimum(gp.samples[i])
 			mingain = (tempmin < mingain ? tempmin : mingain)
 		end
-		mingain = (ymin < mingain ? ymin : mingain)
-		mingain = (mingain > 0.0 ? 0.0 : mingain)
-
-		# Determine ymax
+		ymin = min(ymin, mingain, 0.0)
 		# TODO: Check that ymax is not less than ymin.
-		ymax = ( typeof(ymax) == Nothing ? nothing : (ymax-mingain) )
+		ymax = ( typeof(ymax) == Nothing ? nothing : (ymax - ymin) )
 
-		gain_plot = plotgains(gp.angles, gp.meangains, mingain)
-		plot_array = plotsamples(gp.angles, gp.samples, mingain)
+		gain_plot = plotgains(gp.angles, gp.meangains, ymin)
+		plot_array = plotsamples(gp.angles, gp.samples, ymin)
 		push!(plot_array, gain_plot)
-		pa = PolarAxis(plot_array, ymax=ymax, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
+		pa = PolarAxis(plot_array, ymax=ymax, yticklabel="{\\pgfmathparse{$ymin+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
 
 	else
-
 		plot_array = Array(Plots.Linear, num_gp)
-
-		# Determine the min gain...
-		mingain = (ymin < mingain ? ymin : mingain)
-		mingain = (mingain > 0.0 ? 0.0 : mingain)
-
-		# If user specified a ymax, do something about it
+		ymin = min(ymin, mingain, 0.0)
 		# TODO: Check that ymax is not less than ymin.
-		ymax = ( typeof(ymax) == Nothing ? nothing : (ymax-mingain) )
+		ymax = ( typeof(ymax) == Nothing ? nothing : (ymax - ymin) )
 
 		for i = 1:num_gp
 			gp = gp_array[i]
-			plot_array[i] = plotgains(gp.angles, gp.meangains, mingain)
+			plot_array[i] = plotgains(gp.angles, gp.meangains, ymin)
 		end
 
-		pa = PolarAxis(plot_array, ymax=ymax, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
+		pa = PolarAxis(plot_array, ymax=ymax, yticklabel="{\\pgfmathparse{$ymin+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
 	end
 
 	# Return the polar axis object
