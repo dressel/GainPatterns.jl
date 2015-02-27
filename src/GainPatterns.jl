@@ -21,6 +21,11 @@ type GainPattern
 	# The samples array uses the single gain at each angle as that gain
 	function GainPattern(angles::Vector{Float64}, gains::Vector{Float64})
 
+		# Error if the angles and gains vectors are of different lengths
+		if length(angles) != length(gains)
+			error("Number of angles must match number of gains")
+		end
+
 		# Create samples vectors from gains
 		num_gains = length(gains)
 		samples = Array(Vector{Float64}, num_gains)
@@ -168,6 +173,101 @@ function refine(samples::Vector{Vector{Float64}})
 end
 
 
+# Subtracts gp2 from gp1
+# Only works if they both have the same number of angles
+# Assumes that the angles are the same
+# TODO: Should I check that the angles are the same?
+# If the samples are all of equal length, these are subtracted
+# Otherwise, only the means are subtracted,
+#  and a new samples array is initialized (with only the mean as a sample)
+function -(gp1::GainPattern, gp2::GainPattern)
+	num_angles1 = length(gp1.angles)
+	num_angles2 = length(gp2.angles)
+
+	if num_angles1 != num_angles2
+		error("Number of angles must be the same!")
+	end
+
+	# Loop through samples, ensuring they are the same length
+	same_sample_length = true
+	num_angles = num_angles1
+	gains = Array(Float64, num_angles)
+	for i = 1:num_angles
+		if length(gp1.samples[i]) != length(gp2.samples[i])
+			same_sample_length = false
+		end
+		gains[i] = gp1.meangains[i] - gp2.meangains[i]
+	end
+
+	# If the samples are all the same length, subtract them
+	# Otherwise, just create a new gain pattern with the calculated means
+	samples = Array(Vector{Float64}, num_angles)
+	if same_sample_length
+		for i = 1:num_angles
+			samples[i] = gp1.samples[i] - gp2.samples[i]
+		end
+		gp_new = GainPattern(gp1.angles, samples)
+	else
+		gp_new = GainPattern(gp1.angles, gains)
+	end
+
+	return gp_new
+end
+
+
+# Addition function for gain patterns.
+# Identical to subtraction, except for + sign in a few spots instaed of -
+function +(gp1::GainPattern, gp2::GainPattern)
+	num_angles1 = length(gp1.angles)
+	num_angles2 = length(gp2.angles)
+
+	if num_angles1 != num_angles2
+		error("Number of angles must be the same!")
+	end
+
+	# Loop through samples, ensuring they are the same length
+	same_sample_length = true
+	num_angles = num_angles1
+	gains = Array(Float64, num_angles)
+	for i = 1:num_angles
+		if length(gp1.samples[i]) != length(gp2.samples[i])
+			same_sample_length = false
+		end
+		gains[i] = gp1.meangains[i] + gp2.meangains[i]
+	end
+
+	# If the samples are all the same length, subtract them
+	# Otherwise, just create a new gain pattern with the calculated means
+	samples = Array(Vector{Float64}, num_angles)
+	if same_sample_length
+		for i = 1:num_angles
+			samples[i] = gp1.samples[i] + gp2.samples[i]
+		end
+		gp_new = GainPattern(gp1.angles, samples)
+	else
+		gp_new = GainPattern(gp1.angles, gains)
+	end
+
+	return gp_new
+end
+
+
+# Adding a constant term to a gain pattern
+function +(gp::GainPattern, c::Real)
+	gp_new = deepcopy(gp)
+	num_angles = length(gp.angles)
+	for i = 1:num_angles
+		gp_new.meangains[i] += c
+		gp_new.samples[i] += c
+	end
+
+	return gp_new
+end
+
++(c::Real, gp::GainPattern) = +(gp, c)
+-(gp::GainPattern, c::Real) = +(gp, -c)
+
+
 # Returns a normalized distribution
 # This normalization was shown in Graefenstein 2009
 # Creates a copy of the gains then calls the in-place version
@@ -264,7 +364,7 @@ end
 #  I just don't know if you'd ever want to plot samples with many plots.
 #  It would look shitty and I'd have to handle the colors
 function plot(gp::GainPattern; ymin::Real=0.0, ymax=nothing, plotsamples::Bool=false)
-	plot([gp], ymin, ymax, plotsamples)
+	plot([gp], ymin=ymin, ymax=ymax, plotsamples=plotsamples)
 end
 function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, plotsamples::Bool=false)
 
@@ -299,7 +399,7 @@ function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, plots
 			mingain = (tempmin < mingain ? tempmin : mingain)
 		end
 		mingain = (ymin < mingain ? ymin : mingain)
-		mingain = (mingain > 0. ? 0. : mingain)
+		mingain = (mingain > 0.0 ? 0.0 : mingain)
 
 		# Determine ymax
 		# TODO: Check that ymax is not less than ymin.
@@ -313,18 +413,18 @@ function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, plots
 	else
 
 		plot_array = Array(Plots.Linear, num_gp)
+
+		# Determine the min gain...
+		mingain = (ymin < mingain ? ymin : mingain)
+		mingain = (mingain > 0.0 ? 0.0 : mingain)
+
+		# If user specified a ymax, do something about it
+		# TODO: Check that ymax is not less than ymin.
+		ymax = ( typeof(ymax) == Nothing ? nothing : (ymax-mingain) )
+
 		for i = 1:num_gp
 			gp = gp_array[i]
-
-			# Determine the min gain...
-			mingain = (ymin < mingain ? ymin : mingain)
-			mingain = (mingain > 0. ? 0. : mingain)
-
 			plot_array[i] = plotgains(gp.angles, gp.meangains, mingain)
-
-			# If user specified a ymax, do something about it
-			# TODO: Check that ymax is not less than ymin.
-			ymax = ( typeof(ymax) == Nothing ? nothing : (ymax-mingain) )
 		end
 
 		pa = PolarAxis(plot_array, ymax=ymax, yticklabel="{\\pgfmathparse{$mingain+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
