@@ -19,32 +19,42 @@ The purpose of this package is to allow the plotting of gain patterns. It is ass
 
 ## Example Usage
 ```
-angles = [0:360]
+angles = [0:359]
 gains = float(cosd(angles))   # returns array of type any sometimes??
 gp = GainPattern(angles, gains)
-axis = plot(gp)
-save("plot1.pdf", axis)
+p = plot(gp)
+save("plot1.pdf", p)
 ```
 Now say you want to make the minimum y (radial) value -2, and not -1. You can specify this:
 ```
-angles = [0:360]
+angles = [0:359]
 gains = float(cosd(angles))   # returns array of type any sometimes??
 gp = GainPattern(angles, gains)
-axis = plot(gp, ymin=-2)
-save("plot2.pdf", axis)
+p = plot(gp, ymin=-2)
+save("plot2.pdf", p)
+```
+You can specify the maximum radial value as well, using the `ymax` parameter, similarly to how the `ymin` parameter is used.
+
+Notice how the plot is always closed? We only have values for angles 0 to 359, but there is a line between 359 and zero. That is because GainPatterns automatically draws a line between the last point and the first point, to make the gain pattern look continuous over all angles.
+
+Sometimes, this behavior is undesirable. For example, maybe you get more than one revolution of data; maybe you start measuring gains at 45 degrees and loop all the way around to 47 degrees. It might be silly to draw a line connecting the last and first points in such a case. For these situations (or any time you'd like), you can set the optional argument `lastleg` to false when plotting.
+```
+p = plot(gp, lastleg=false)
 ```
 
 ## Near-Term Plans
 This is currently still very rough. Some things I want to add:
-* ~~Create a GainPattern type~~ done!
-* ~~Allow creation of said type through a text or csv file~~ done!
+* ~~Create a GainPattern type~~ done
+* ~~Allow creation of said type through a text or csv file~~ done
 * Overhaul documentation and create Julia notebook with examples
-* ~~make ymin work for plot~~ done!
-* Create subtraction
+* ~~make ymin work for plot~~ done
+* ~~Create subtraction~~ done
 * Create shift! and flip! functions (for angles...)
 * Allow log-axis for gains
 * Make plots show up immediately (this is a PGFPlots issue)
-* Test `validgain` function and over-writing it
+* ~~Test `validgain` function and over-writing it~~ done
+* Create sample function to sample from a gain pattern at a given angle
+* If a samples vector has only one entry, eliminate it? or maybe not. Plotting doesn't seem to have an issue with this
 
 ## Future Plans
 Future plans (like way down the road):
