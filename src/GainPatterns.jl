@@ -358,11 +358,11 @@ end
 
 
 # Returns the PolarAxis object containing a plot of the gain pattern
-function plot(gp::GainPattern; ymin::Real=0.0, ymax=nothing, showsamples::Bool=false)
-	plot([gp], ymin=ymin, ymax=ymax, showsamples=showsamples)
+function plot(gp::GainPattern; ymin::Real=0.0, ymax=nothing, showsamples::Bool=false, lastleg::Bool=true)
+	plot([gp], ymin=ymin, ymax=ymax, showsamples=showsamples, lastleg=lastleg)
 end
 
-function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, showsamples::Bool=false)
+function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, showsamples::Bool=false, lastleg::Bool=true)
 
 	# Create an array with length of angles for each gain pattern
 	# Create an array with minimum mean gain for each pattern
@@ -391,7 +391,7 @@ function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, shows
 			ymax < ymin ? error(emsg) : nothing
 		end
 
-		gain_plot = plotgains(gp.angles, gp.meangains, ymin)
+		gain_plot = plotgains(gp.angles, gp.meangains, ymin, lastleg)
 		plot_array = plotsamples(gp.angles, gp.samples, ymin)
 		push!(plot_array, gain_plot)
 		pa = PolarAxis(plot_array, ymax=ymax, yticklabel="{\\pgfmathparse{$ymin+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
@@ -406,7 +406,7 @@ function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, shows
 		plot_array = Array(Plots.Linear, num_gp)
 		for i = 1:num_gp
 			gp = gp_array[i]
-			plot_array[i] = plotgains(gp.angles, gp.meangains, ymin)
+			plot_array[i] = plotgains(gp.angles, gp.meangains, ymin, lastleg)
 		end
 		pa = PolarAxis(plot_array, ymax=ymax, yticklabel="{\\pgfmathparse{$ymin+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
 	end
@@ -421,7 +421,7 @@ end
 #
 # ymin = minimum y (gain or radial) value. If it is positive, it is ignored.
 #  If it is less than the minimum value of gains, also ignored.
-function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}, ymin::Real)
+function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}, ymin::Real, lastleg::Bool)
 
 	# Make copies before we make some changes
 	# Remember to shift gains by the minimum value to be plotted
@@ -430,7 +430,7 @@ function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}, ymi
 
 	# Last point must be same as first point to complete the plot
 	# If not, it will be missing a section between last point and first
-	if angles[1] != angles[end]
+	if (angles[1] != angles[end]) && lastleg
 		push!(plot_angles, plot_angles[1])
 		push!(plot_gains, plot_gains[1])
 	end
