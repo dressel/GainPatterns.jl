@@ -41,6 +41,15 @@ Sometimes, this behavior is undesirable. For example, maybe you get more than on
 ```
 p = plot(gp, lastleg=false)
 ```
+You can pass in a vector of gain patterns to plot them on a single axis.
+```
+p = plot([gp1, gp2])
+```
+If you are using `plot` to plot multiple gain patterns, you can specify the legend entries.
+```
+p = plot([gp1, gp2], legendentries=["Gain Pattern 1", "Gain Pattern 2"])
+```
+If the dimensions of the pattern array and the legend entries array don't match, it will probably fail. I must check this.
 
 ## Near-Term Plans
 This is currently still very rough. Some things I want to add:

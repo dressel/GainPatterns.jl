@@ -362,7 +362,7 @@ function plot(gp::GainPattern; ymin::Real=0.0, ymax=nothing, showsamples::Bool=f
 	plot([gp], ymin=ymin, ymax=ymax, showsamples=showsamples, lastleg=lastleg)
 end
 
-function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, showsamples::Bool=false, lastleg::Bool=true)
+function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, showsamples::Bool=false, lastleg::Bool=true, legendentries=nothing)
 
 	# Create an array with length of angles for each gain pattern
 	# Create an array with minimum mean gain for each pattern
@@ -377,6 +377,8 @@ function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, shows
 	mingain = minimum(mingain_array)
 
 	# Currently, only plot samples for one gain pattern
+	# TODO: Don't allow legend entries for showing samples
+	#  Or do, but it has to be done well...
 	if showsamples && (num_gp == 1)
 		gp = gp_array[1]
 		for i = 1:nangles_array[1]
@@ -403,10 +405,15 @@ function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, shows
 			ymax < ymin ? error(emsg) : nothing
 		end
 
+		# legendentries must be indexable
+		if legendentries == nothing
+			legendentries = Array(Nothing, num_gp)
+		end
+
 		plot_array = Array(Plots.Linear, num_gp)
 		for i = 1:num_gp
 			gp = gp_array[i]
-			plot_array[i] = plotgains(gp.angles, gp.meangains, ymin, lastleg)
+			plot_array[i] = plotgains(gp.angles, gp.meangains, ymin, lastleg, legendentries[i])
 		end
 		pa = PolarAxis(plot_array, ymax=ymax, yticklabel="{\\pgfmathparse{$ymin+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
 	end
@@ -421,7 +428,7 @@ end
 #
 # ymin = minimum y (gain or radial) value. If it is positive, it is ignored.
 #  If it is less than the minimum value of gains, also ignored.
-function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}, ymin::Real, lastleg::Bool)
+function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}, ymin::Real, lastleg::Bool, legendentry)
 
 	# Make copies before we make some changes
 	# Remember to shift gains by the minimum value to be plotted
@@ -437,7 +444,7 @@ function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}, ymi
 
 	# Create a linear plot and return it
 	#return Plots.Linear(plot_angles, plot_gains, mark="none", style="red,thick")
-	return Plots.Linear(plot_angles, plot_gains, mark="none", style="thick")
+	return Plots.Linear(plot_angles, plot_gains, mark="none", style="thick", legendentry=legendentry)
 end
 
 # Returns an array of plots
