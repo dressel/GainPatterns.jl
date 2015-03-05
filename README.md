@@ -9,13 +9,6 @@ The purpose of this package is to allow the plotting of gain patterns. It is ass
 
 `crosscorrelate(ref, sample, angles)` performs a cross-correlation of the sample and a reference signal. The idea is that the reference is of length 360, and the sample can be of variable length. `angles` is a vector of the angles at which `sample` was sampled.
 
-`plotgains(angles::Vector{Real}, gains::Vector{Real})` creates a PolarAxis object containing the plot of the gains vs the angles. You can save it using `save` from PGFPlots.jl.
-
-`plotgains(angles::Vector{Real}, gains::Vector{Real}, ymin::Real)` is the same as above, except it allows you to specify a minimum y (radial) value.
-
-`plotgains(angles::Vector{Real}, gains::Matrix{Real}, ymin::Real)` plots errors along the radial direction. Each row in gains corresponds to a specific angle. The values of the columns correspond to different samples taken at that angle.
-
-`plotgains(angles::Vector{Real}, gains::Matrix{Real}, ymin::Real)` is the same as above, except it allows you to specify a minimum y (radial) value.
 
 ## Example Usage
 ```
@@ -64,6 +57,7 @@ This is currently still very rough. Some things I want to add:
 * ~~Test `validgain` function and over-writing it~~ done
 * Create sample function to sample from a gain pattern at a given angle
 * If a samples vector has only one entry, eliminate it? or maybe not. Plotting doesn't seem to have an issue with this
+* Group plots (you can't use grouplot package for this)
 
 ## Future Plans
 Future plans (like way down the road):
