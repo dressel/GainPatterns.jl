@@ -300,14 +300,11 @@ end
 #  How do we normalize both the means and the samples?
 #  Do we just use the means and std deviations of the meangains vector?
 function normalize!(gains::Vector{Float64})
-
-	# Calculate mean, std deviation, and vector length
 	m = mean(gains)
 	s = std(gains)
-	l = length(gains)
+	len = length(gains)
 
-	# Perform the normalization
-	for i = 1:l
+	for i = 1:len
 		gains[i] = (gains[i] - m) / s
 	end
 end
