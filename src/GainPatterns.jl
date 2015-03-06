@@ -2,9 +2,11 @@ module GainPatterns
 
 # package code goes here
 export GainPattern, validgain, plot, rotate!
-export normalize, normalize!, sampleGains, crosscorrelate
+export normalize, normalize!, sampleGains, crosscorrelate, addsamples!
 export PolarAxis, save, Axis
 import PGFPlots: PolarAxis, Plots, save, Axis
+import StatsBase.sample
+export sample
 
 # angles is the list of angles
 # meangains is the list of gains
@@ -267,6 +269,21 @@ end
 +(c::Real, gp::GainPattern) = +(gp, c)
 -(gp::GainPattern, c::Real) = +(gp, -c)
 
+# Appends the samples of gp2 to the samples vector of gp1
+# Recalculates the mean gains of gp1
+#
+# Assumes that all the samples in the gain patterns are valid
+function addsamples!(gp1::GainPattern, gp2::GainPattern)
+	@assert gp1.angles == gp2.angles
+	num_angles = length(gp1.angles)
+	for i = 1:num_angles
+		for j = 1:length(gp2.samples[i])
+			push!(gp1.samples[i], gp2.samples[i][j])
+		end
+		gp1.meangains[i] = mean(gp1.samples[i])
+	end
+end
+
 
 # Returns a normalized distribution
 # This normalization was shown in Graefenstein 2009
@@ -279,6 +296,9 @@ end
 
 
 # In place version of the above.
+# TODO: Normalize function that takes in gain pattern
+#  How do we normalize both the means and the samples?
+#  Do we just use the means and std deviations of the meangains vector?
 function normalize!(gains::Vector{Float64})
 
 	# Calculate mean, std deviation, and vector length
@@ -293,10 +313,6 @@ function normalize!(gains::Vector{Float64})
 end
 
 
-# TODO: Normalize function that takes in gain pattern
-#  How do we normalize both the means and the samples?
-#  Do we just use the means and std deviations of the meangains vector?
-
 # Rotates the gain pattern by a specified number of degrees
 # We must also call mod so the degrees stay in the proper range
 function rotate!(gp::GainPattern, degrees::Real)
@@ -305,6 +321,14 @@ function rotate!(gp::GainPattern, degrees::Real)
 	end
 end
 
+
+# Samples at a specified angle
+# TODO: allow for angles not specified in pattern. Requires interpolation
+function sample(gp::GainPattern, angle::Real)
+	 i = findfirst(gp.angles, angle)
+	 i == 0 ? error("Currently, you must sample from angle for which the gain pattern has samples") : nothing
+	 sample(gp.samples[i])
+end
 
 # Sample from a given distribution of gains
 # Returns the gains sampled, and the angles at which these samples occurred
