@@ -322,9 +322,23 @@ end
 # Samples at a specified angle
 # TODO: allow for angles not specified in pattern. Requires interpolation
 function sample(gp::GainPattern, angle::Real)
-	 i = findfirst(gp.angles, angle)
-	 i == 0 ? error("Currently, you must sample from angle for which the gain pattern has samples") : nothing
-	 sample(gp.samples[i])
+	i = findfirst(gp.angles, angle)
+	i == 0 ? error("Currently, you must sample from angle for which the gain pattern has samples") : nothing
+	sample(gp.samples[i])
+end
+
+# Samples at a vector of specified angles
+# These angles must all exist in the gain pattern's angle vector
+# TODO: maybe allow for angles not specified in pattern?
+function sample{T<:Real}(gp::GainPattern, angles::Vector{T})
+	num_angles = length(angles)
+	gains = Array(Float64, num_angles)
+	for i = 1:num_angles
+		idx = findfirst(gp.angles, angles[i])
+		idx == 0 ? error("Currently, you must sample from angle for which the gain pattern has samples") : nothing
+		gains[i] = sample(gp.samples[idx])
+	end
+	return gains
 end
 
 # Sample from a given distribution of gains
