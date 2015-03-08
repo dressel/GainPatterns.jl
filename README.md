@@ -11,6 +11,8 @@ The purpose of this package is to allow the plotting of gain patterns. It is ass
 
 
 ## Example Usage
+Check out the [examples](http://nbviewer.ipython.org/github/dressel/GainPatterns.jl/blob/master/doc/GainPatterns.ipynb).
+
 ```
 angles = [0:359]
 gains = float(cosd(angles))   # returns array of type any sometimes??
