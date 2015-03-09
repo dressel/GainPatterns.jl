@@ -60,8 +60,9 @@ This is currently still very rough. Some things I want to add:
 * Create sample function to sample from a gain pattern at a given angle
 * If a samples vector has only one entry, eliminate it? or maybe not. Plotting doesn't seem to have an issue with this
 * Group plots (you can't use tex grouplot package for this)
-* Sample an entire distribution and return an array (or fill one)
-* Normalize function for gainpatterns
+* ~~Sample an entire distribution and return an array (or fill one)~~done
+* ~~Normalize function for gainpatterns~~done
+* Allow for units on axes
 
 ## Future Plans
 Future plans (like way down the road):
