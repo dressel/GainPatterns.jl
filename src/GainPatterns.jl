@@ -310,6 +310,23 @@ function normalize!(gains::Vector{Float64})
 end
 
 
+# Calculates mean and standard deviation of meangains
+# Applies the normalization (x-m) / s
+# Also applies normalization to each of the samples
+function normalize!(gp::GainPattern)
+	m = mean(gp.meangains)
+	s = std(gp.meangains)
+	num_angles = length(gp.angles)
+
+	for i = 1:num_angles
+		gp.meangains[i] = (gp.meangains[i]-m)/s
+		for j = 1:length(gp.samples[i])
+			gp.samples[i][j] = (gp.samples[i][j] - m) / s
+		end
+	end
+end
+
+
 # Rotates the gain pattern by a specified number of degrees
 # We must also call mod so the degrees stay in the proper range
 function rotate!(gp::GainPattern, degrees::Real)
