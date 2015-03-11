@@ -46,6 +46,12 @@ p = plot([gp1, gp2], legendentries=["Gain Pattern 1", "Gain Pattern 2"])
 ```
 If the dimensions of the pattern array and the legend entries array don't match, it will probably fail. I must check this.
 
+You can plot stuff and show the degrees with:
+```
+plot(gp, degrees=true)
+```
+
+
 ## Near-Term Plans
 This is currently still very rough. Some things I want to add:
 * ~~Create a GainPattern type~~ done
