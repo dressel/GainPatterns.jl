@@ -2,7 +2,7 @@ module GainPatterns
 
 # package code goes here
 export GainPattern, validgain, plot, rotate!
-export normalize, normalize!, sampleGains, crosscorrelate, addsamples!
+export normalize, normalize!, sampleGains, crosscorrelate, addsamples!, csv
 export PolarAxis, save, Axis
 import PGFPlots: PolarAxis, Plots, save, Axis
 import StatsBase.sample
@@ -526,6 +526,20 @@ function plotsamples{T1<:Real,T2<:Real}(angles::Vector{T1}, samples::Vector{Vect
 	# Return the array of plots
 	return plot_array
 end
+
+# Writes a gain pattern to a file
+# TODO: check that the file exists
+# TODO: Check that they add csv file extension if not, add it
+# Currently only prints out meangains, but could theoretically do samples too
+function csv(gp::GainPattern, filename::String="temp.csv")
+	num_angles = length(gp.angles)
+	outfile = open(filename, "w")
+	for i = 1:num_angles
+		write(outfile, "$(gp.angles[i]), $(gp.meangains[i])\n")
+	end
+	close(outfile)
+end
+
 
 
 end # module

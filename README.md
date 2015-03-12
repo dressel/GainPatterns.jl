@@ -69,6 +69,9 @@ This is currently still very rough. Some things I want to add:
 * ~~Sample an entire distribution and return an array (or fill one)~~done
 * ~~Normalize function for gainpatterns~~done
 * Allow for units on axes
+* function that also prints samples  (not just mean gains)
+* Check if file exists with open (csv +elsewhere)
+* Handle file extension stuff better (csv +elsewhere)
 
 ## Future Plans
 Future plans (like way down the road):
