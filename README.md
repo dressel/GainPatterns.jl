@@ -31,6 +31,13 @@ A GainPattern has three fields:
 * `meangains`, a vector of the gains. `meangains[i]` is the gain measured at `angles[i]`,
 * `samples`, a vector of the samples.
 
+A GainPattern can be saved to a csv file using `csv`.
+First column is angles, second column is meangains.
+```
+csv(gp)						# saves file to temp.csv
+csv(gp, "filename.csv")		# saves file to filename.csv
+```
+
 ## Plotting
 A brief overview is shown here, but check out the [examples](http://nbviewer.ipython.org/github/dressel/GainPatterns.jl/blob/master/doc/GainPatterns.ipynb).
 For some reason, the notebook viewer has been acting oddly in Firefox.
@@ -56,8 +63,12 @@ Optional arguments give you greater control over your plots:
 * `ymin`
 * `ymax`
 * `lastleg` 
+* `style` style (only use if plotting one pattern).
+* `styles` Vector of possible LaTeX styles (use if plotting multiple patterns).
+* `showsamples`
 * `degrees` Set this to true if you want the angles to have degrees.
 * `legendentries` Vector of strings. Length must match length of vector of GainPatterns to plot.
+
 In Julia, optional arguments require you to include the argument name.
 Order does not matter.
 ```
