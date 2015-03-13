@@ -1,17 +1,42 @@
 # GainPatterns
 
-The purpose of this package is to allow the plotting of gain patterns. It is assumed that you have the gain pattern in some text file, and wish to plot it. Some basic gain pattern manipulation (like cross-correlation with similar patterns) will be allowed. It would be cool if gain patterns could be generated from simple antennas, but that is not really what this is for.
+This package allows the plotting and manipulation of gain patterns. 
+A gain pattern is a collection of gains (or strengths) versus angle.
+If you have a vector of angles, and a vector of gains taken at these angles, you can create a GainPattern.
+You can then create publication-ready plots of these gain patterns using PGF.
 
-## Available Functions
-`normalize(gains::Vector{Float64})` returns a new vector with normalized gains.
+I made this package because I was finding it tedious to create these plots.
+PGF allows you to make polar plots, but you can't have negative values.
+This means you have to shift all gains so the lowest one is zero, and then shift the axis labels back.
+This package takes care of all that.
 
-`normalize!(gains::Vector{Float64})` normalizes the provided vector of gains. Similar to `normalize`, but more memory conscious.
+This package also allows you to manipulate gain patterns as well.
+For example, you can normalize a gain pattern (subtract mean gain from every element, and divide by std deviation).
+You can shift a gain pattern by some number of degrees.
+You can add constant values to gain patterns.
+You can also sample possible gains from a gain pattern.
 
-`crosscorrelate(ref, sample, angles)` performs a cross-correlation of the sample and a reference signal. The idea is that the reference is of length 360, and the sample can be of variable length. `angles` is a vector of the angles at which `sample` was sampled.
+This package does not generate gain patterns.
+That is, given some antenna configuration, this will not calculate what the gain pattern should look like.
+That would be useful, but is outside the scope of this package (for now).
+At the moment, the package is mostly a plotting tool
 
+## Requirements
+You need the Julia package PGFPlots to generate the plots.
+PGFPlots requires you to have LaTeX set up on your computer.
 
-## Example Usage
+## Creating GainPatterns
+A GainPattern has three fields.
+* `angles`, a vector of angles (in degrees) at which the gains are sampled at.
+* `meangains`, a vector of the gains. `meangains[i]` is the gain measured at `angles[i]`
+* `samples`, a vector of the samples
+
+## Plotting
 Check out the [examples](http://nbviewer.ipython.org/github/dressel/GainPatterns.jl/blob/master/doc/GainPatterns.ipynb).
+For some reason, the notebook viewer has been acting oddly in Firefox.
+If the axis labels don't show up in the examples, try looking at the exmples in another browser.
+
+A brief overview of plotting is shown below.
 
 ```
 angles = [0:359]
@@ -51,19 +76,31 @@ You can plot stuff and show the degrees with:
 plot(gp, degrees=true)
 ```
 
+## Available Manipulations
+On top of plotting, you can perform the following manipulations on a GainPattern.
+
+`normalize!(gp::GainPattern)` modifies gp by normalizing its meangains and samples.
+
+`rotate!(gp::GainPattern, degrees::Real)` adds degrees to gp's angles vector.
+
+`sample(gp::GainPattern, angle::Real)` randomly samples from gp's samples vector at a given angle.
+Currently, you must select an angle that exists in gp's angles vector.
+In the future, we could do some sort of interpolation.
+
+`sample(gp::GainPattern, angles::Vector{Real})`
+
+`crosscorrelate(ref, sample, angles)` performs a cross-correlation of the sample and a reference signal. The idea is that the reference is of length 360, and the sample can be of variable length. `angles` is a vector of the angles at which `sample` was sampled.
+
 
 ## Near-Term Plans
 This is currently still very rough. Some things I want to add:
-* ~~Create a GainPattern type~~ done
-* ~~Allow creation of said type through a text or csv file~~ done
 * Overhaul documentation and create Julia notebook with examples
-* ~~make ymin work for plot~~ done
 * ~~Create subtraction~~ done
 * Create shift! and flip! functions (for angles...)
 * Allow log-axis for gains
 * Make plots show up immediately (this is a PGFPlots issue)
-* ~~Test `validgain` function and over-writing it~~ done
-* Create sample function to sample from a gain pattern at a given angle
+* ~~Test `validgain` function and overriding it~~ done
+* ~~Create sample function to sample from a gain pattern at a given angle~~ done
 * If a samples vector has only one entry, eliminate it? or maybe not. Plotting doesn't seem to have an issue with this
 * Group plots (you can't use tex grouplot package for this)
 * ~~Sample an entire distribution and return an array (or fill one)~~done
