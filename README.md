@@ -38,18 +38,33 @@ If the axis labels don't show up in the examples, try looking at the exmples in 
 
 Plots can be created with:
 ```
-plot(gp)		# plot single GainPatterns
-plot([gp1, gp2])	# plot multiple GainPatterns together
+plot(gp)			# plot single GainPattern
+plot([gp1, gp2])	# plot multiple GainPatterns on same axis
 ```
 
-You can specify optional arguments to customize your plot.
-`ymin`
-`ymax`
-`lastleg` 
-`degrees` Set this to true if you want the angles to have degrees.
-`legendentries` Vector of strings. Length must match length of vector of GainPatterns to plot.
+`plot` creates a PolarAxis object (from PGFPlots package).
+Currently, it doesn't show anything to the screen (does show in IJulia notebook though).
+Use PGFPlots's `save` function to save the file as a PDF or tex file.
 
-Optional
+```
+p = plot(gp)
+save("plot.pdf", p)		# saves plot as pdf
+save("plot.tex", p)		# saves plot as tex file
+```
+
+Optional arguments give you greater control over your plots:
+* `ymin`
+* `ymax`
+* `lastleg` 
+* `degrees` Set this to true if you want the angles to have degrees.
+* `legendentries` Vector of strings. Length must match length of vector of GainPatterns to plot.
+In Julia, optional arguments require you to include the argument name.
+Order does not matter.
+```
+plot(gp, ymin=-100)
+plot([gp1,gp2], legendentires=["plot1", "plot2"], degrees=true)
+```
+
 
 
 ## Available Manipulations
