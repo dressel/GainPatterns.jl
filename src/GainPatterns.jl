@@ -358,6 +358,11 @@ function sample{T<:Real}(gp::GainPattern, angles::Vector{T})
 	return gains
 end
 
+# Sample a gain for every angle in gp.
+function sample(gp::GainPattern)
+	sample(gp, gp.angles)
+end
+
 # Sample from a given distribution of gains
 # Returns the gains sampled, and the angles at which these samples occurred
 # TODO: Look into this, see if it is still working

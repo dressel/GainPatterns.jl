@@ -89,7 +89,12 @@ On top of plotting, you can perform the following manipulations on a GainPattern
 Currently, you must select an angle that exists in gp's angles vector.
 In the future, we could do some sort of interpolation.
 
-`sample(gp::GainPattern, angles::Vector{Real})`
+`sample(gp::GainPattern, angles::Vector{Real})` allows you to sample from a specified set of angles.
+Each sample in the angles parameter must exist in gp.
+
+`sample(gp::GainPattern)` samples from gp's set of angles.
+A gain is sampled for every angle of gp.
+This is equivalent to calling `sample(gp, gp.angles)`.
 
 `crosscorrelate(ref, sample, angles)` performs a cross-correlation of the sample and a reference signal. The idea is that the reference is of length 360, and the sample can be of variable length. `angles` is a vector of the angles at which `sample` was sampled.
 
