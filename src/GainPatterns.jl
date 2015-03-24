@@ -238,7 +238,7 @@ function +(gp1::GainPattern, gp2::GainPattern)
 		gains[i] = gp1.meangains[i] + gp2.meangains[i]
 	end
 
-	# If the samples are all the same length, subtract them
+	# If the samples are all the same length, add them
 	# Otherwise, just create a new gain pattern with the calculated means
 	samples = Array(Vector{Float64}, num_angles)
 	if same_sample_length

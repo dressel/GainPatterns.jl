@@ -93,6 +93,18 @@ In the future, we could do some sort of interpolation.
 
 `crosscorrelate(ref, sample, angles)` performs a cross-correlation of the sample and a reference signal. The idea is that the reference is of length 360, and the sample can be of variable length. `angles` is a vector of the angles at which `sample` was sampled.
 
+## Adding and Subtracting GainPatterns
+You can also add and subtract gain patterns.
+Addition and subtraction return new gain patterns.
+For example, `gp1 + gp2` will create a new GainPattern.
+`gp1` and `gp2` need to have the same number of angles for addition/subtraction.
+
+If the length of the sample vectors are the same for both `gp1` and `gp2`, then the sample vectors are added/subtracted.
+If `gp1` and `gp2` have sample vectors of different lengths, then only the mean gains are added/subtracted,
+and the new gain pattern will be created just from this vector of added/subtracted mean gains.
+
+You can also add a constant to a gain pattern.
+This adds a constant to the meangain and every sample.
 
 ## Near-Term Plans
 This is currently still very rough. Some things I want to add:
