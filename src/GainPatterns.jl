@@ -21,6 +21,7 @@ type GainPattern
 
 	# Constructor where user passes in angles and mean gains
 	# The samples array uses the single gain at each angle as that gain
+	# TODO: check that these gains are valid
 	function GainPattern(angles::Vector{Float64}, gains::Vector{Float64})
 
 		# Error if the angles and gains vectors are of different lengths
@@ -32,7 +33,12 @@ type GainPattern
 		num_gains = length(gains)
 		samples = Array(Vector{Float64}, num_gains)
 		for i = 1:num_gains
-			samples[i] = [gains[i]]
+			if validgain(gains[i])
+				samples[i] = [gains[i]]
+			else
+				samples[i] = []
+				gains[i] = NaN
+			end
 		end
 
 		# Return
