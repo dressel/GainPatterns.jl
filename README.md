@@ -111,6 +111,12 @@ and the new gain pattern will be created just from this vector of added/subtract
 You can also add a constant to a gain pattern.
 This adds a constant to the meangain and every sample.
 
+If you simply want to combine two gain patterns, use `addsamples!`, as shown below:
+```
+addsamples!(gp1, gp2)
+```
+This will add the append the saples of gp2 to the samples of gp1.
+
 ## Near-Term Plans
 This is currently still very rough. Some things I want to add:
 * Overhaul documentation and create Julia notebook with examples
