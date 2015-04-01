@@ -342,6 +342,9 @@ function rotate!(gp::GainPattern, degrees::Real)
 end
 
 
+###########################################################################
+# SAMPLING
+###########################################################################
 # Samples at a specified angle
 # TODO: allow for angles not specified in pattern. Requires interpolation
 function sample(gp::GainPattern, angle::Real)
@@ -419,7 +422,9 @@ function cc_helper(shift, ref, sample, angles)
 	return c
 end
 
-
+###########################################################################
+# PLOTTING
+###########################################################################
 # Returns the PolarAxis object containing a plot of the gain pattern
 function plot(gp::GainPattern; ymin::Real=0.0, ymax=nothing, showsamples::Bool=false, lastleg::Bool=true, style=nothing, degrees::Bool=false)
 	plot([gp], ymin=ymin, ymax=ymax, showsamples=showsamples, lastleg=lastleg, styles=[style],degrees=degrees)
@@ -542,13 +547,56 @@ end
 # TODO: check that the file exists
 # TODO: Check that they add csv file extension if not, add it
 # Currently only prints out meangains, but could theoretically do samples too
-function csv(gp::GainPattern, filename::String="temp.csv")
+function csv(gp::GainPattern, filename::String="temp.csv"; samples=true)
 	num_angles = length(gp.angles)
 	outfile = open(filename, "w")
-	for i = 1:num_angles
-		write(outfile, "$(gp.angles[i]), $(gp.meangains[i])\n")
+
+	if samples
+		for i = 1:num_angles
+			num_samples = length(gp.samples[i])
+			write(outfile, "$(gp.angles[i])")
+			for j = 1:num_samples
+				write(outfile, ",$(gp.samples[i][j])")
+			end
+			write(outfile, "\n")
+		end
+	else
+		for i = 1:num_angles
+			write(outfile, "$(gp.angles[i]), $(gp.meangains[i])\n")
+		end
 	end
+
 	close(outfile)
+end
+
+# Finds minimum and maximum gains in gain pattern's samples, in one sweep
+# Checks if each gain is valid
+# I don't know how I feel about that...
+function Base.extrema(gp::GainPattern)
+	num_angles = length(gp.angles)
+	min_sample = Inf
+	max_sample = -Inf
+	for i = 1:num_angles
+		num_samples = length(gp.samples[i])
+		for j = 1:num_samples
+			temp = gp.samples[i][j]
+			if validgain(temp)
+				max_sample = max(temp, max_sample)
+				min_sample = min(temp, min_sample)
+			end
+		end
+	end
+	return min_sample, max_sample
+end
+
+# Returns the maximum sample in the gain pattern's samples
+function Base.maximum(gp::GainPattern)
+	extrema(gp)[2]
+end
+
+# Returns the minimum sample in the gain pattern's samples
+function Base.minimum(gp::GainPattern)
+	extrema(gp)[1]
 end
 
 
