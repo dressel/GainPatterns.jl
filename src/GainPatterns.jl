@@ -562,7 +562,7 @@ function csv(gp::GainPattern, filename::String="temp.csv"; samples=true)
 		end
 	else
 		for i = 1:num_angles
-			write(outfile, "$(gp.angles[i]), $(gp.meangains[i])\n")
+			write(outfile, "$(gp.angles[i]),$(gp.meangains[i])\n")
 		end
 	end
 
