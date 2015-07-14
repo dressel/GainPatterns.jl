@@ -292,17 +292,25 @@ function normalize{T<:Real}(gains::Vector{T})
 end
 
 
-# In place version of the above.
-# TODO: Normalize function that takes in gain pattern
-#  How do we normalize both the means and the samples?
-#  Do we just use the means and std deviations of the meangains vector?
+# Normalizes a vector by subtracting the mean and dividing by std dev
+# Pretends invalid gains aren't even there
 function normalize!(gains::Vector{Float64})
-	m = mean(gains)
-	s = std(gains)
-	len = length(gains)
+
+	temp_gains = copy(gains)
+	len = length(temp_gains)
+	for j = len:-1:1
+		if !validgain(temp_gains[j])
+			deleteat!(temp_gains, j)
+		end
+	end
+
+	m = mean(temp_gains)
+	s = std(temp_gains)
 
 	for i = 1:len
-		gains[i] = (gains[i] - m) / s
+		if validgain(gains[i])
+			gains[i] = (gains[i] - m) / s
+		end
 	end
 end
 
@@ -388,20 +396,21 @@ end
 #
 # Returns vector containing shifts at every degree
 #	ith index corresponds to (i-1) shift
-# TODO: Make this more efficient
 #
 # The idea is that the reference is of length 360, 
 #  but the sample need not be.
 # Therefore, a vector of sampled angles is provided.
-# TODO: handle null observations
 # TODO: give this a thorough scrubbing. It is important to me that it works
 function bearing_cc(angles, gains, ref_angles, ref_gains)
 	cval = 0.0
-	max_cval = -100000
+	max_cval = -Inf
 	max_i = 0.0
 
+	norm_gains = copy(gains)
+	normalize!(norm_gains)
+
 	for i = 0:359
-		cval = cross_correlate(angles, gains, ref_angles, ref_gains, i)
+		cval = cross_correlate(angles, norm_gains, ref_angles, ref_gains, i)
 		if (cval > max_cval)
 			max_cval = cval
 			max_i = i
@@ -413,17 +422,20 @@ end
 
 # Helper function to perform cross-correlation
 # This is the cross-correlation function used in Graefenstein 2009
-# Inputs are:
-#	rarkk
+# Handle null observations
 function cross_correlate(angles, gains, ref_angles, ref_gains, shift)
 	c = 0.0
 	len = length(angles)
 	for i = 1:len
-		c += gains[i] * interp_gain(angles[i], shift, ref_angles, ref_gains)
+		if validgain(gains[i])
+			c += gains[i] * interp_gain(angles[i], shift, ref_angles, ref_gains)
+		end
 	end
 	return c
 end
 
+
+# I think this is just nearest neighbor interpolation
 function interp_gain(angle, shift, ref_angles, ref_gains)
 	# Add the shift to the desired angle, be sure to mod it
 	angle = mod(angle+shift, 360)
