@@ -24,6 +24,7 @@ type GainPattern
 	# Constructor where user passes in angles and mean gains
 	# The samples array uses the single gain at each angle as that gain
 	# TODO: check that these gains are valid
+	# TODO: just don't insert that entry if invalid
 	function GainPattern(angles::Vector{Float64}, gains::Vector{Float64})
 
 		# Error if the angles and gains vectors are of different lengths
@@ -53,58 +54,20 @@ type GainPattern
 
 	# Allow user to input matrix
 	# Makes no assumption about the validity of all the inputs
-	# TODO: Make use of the refine function
 	function GainPattern{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Matrix{T2})
 
 		# Determine number of angles and samples we are looking at
-		n_angles, n_samples = size(gains)
+		num_angles, num_samples = size(gains)
 
-		# Create two of the main data structures we need (angles given to us)
-		meangains = Array(Float64, n_angles)
-		samples = Array(Vector{Float64}, n_angles)
-
-		# Loop over all samples to determine
-		for i = 1:n_angles
-			samples[i] = Array(Float64, 0)
-			rowavg = 0.0
-			numvalid = 0
-			for j = 1:n_samples
-				tempgain = gains[i,j]
-				push!(samples[i], tempgain)
-				if validgain(tempgain)
-					rowavg += tempgain
-					numvalid += 1
-				end
-			end
-			meangains[i] = rowavg / numvalid
+		# Turn gains matrix into proper samples vector, then refine and return
+		samples = Array(Vector{Float64}, num_angles)
+		for i = 1:num_angles
+			samples[i] =  vec(gains[i,:])
 		end
+		meangains, refined_samples = refine(samples)
+		return new(angles, meangains, refined_samples)
+	end
 
-		return new(angles, meangains, samples)
-	end
-function refine(samples::Vector{Vector{Float64}})
-	# Calculate number of angles and create required data structures
-	num_angles = length(samples)
-	refined_samples = Array(Vector{Float64}, num_angles)
-	meangains = Array(Float64, num_angles)
-	# Loop through all sample vectors, 
-	#  eliminating invalid gain values and calculating the mean
-	for i = 1:num_angles
-		refined_samples[i] = Array(Float64, 0)
-		rowavg = 0.0
-		numvalid = 0
-		num_samples = length(samples[i])
-		for j = 1:num_samples
-			tempgain = samples[i][j]
-			push!(refined_samples[i], tempgain)
-			if validgain(tempgain)
-				rowavg += tempgain
-				numvalid += 1
-			end
-		end
-		meangains[i] = rowavg / numvalid
-	end
-	return meangains, refined_samples
-end
 
 	# Create gain pattern from samples
 	# First, we refine the samples (remove invalid entries, compute mean)
@@ -113,6 +76,7 @@ end
 		meangains, refined_samples = refine(samples)
 		return new(angles, meangains, refined_samples)
 	end
+
 
 	# Create gain pattern from csv file
 	# Assumes first column is angles
