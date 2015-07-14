@@ -2,11 +2,13 @@ module GainPatterns
 
 # package code goes here
 export GainPattern, validgain, plot, rotate!
-export normalize, normalize!, sampleGains, crosscorrelate, addsamples!, csv
+export normalize, normalize!, sampleGains, bearing_cc, addsamples!, csv
 export PolarAxis, save, Axis
 import PGFPlots: PolarAxis, Plots, save, Axis
 import StatsBase.sample
 export sample
+
+_nullobs = 2147483647.
 
 # angles is the list of angles
 # meangains is the list of gains
@@ -40,9 +42,7 @@ type GainPattern
 				gains[i] = NaN
 			end
 		end
-
-		# Return
-		new(angles, gains, samples)
+		return new(angles, gains, samples)
 	end
 
 	# Constructor taking in only angles and mean gains
@@ -70,34 +70,41 @@ type GainPattern
 			numvalid = 0
 			for j = 1:n_samples
 				tempgain = gains[i,j]
+				push!(samples[i], tempgain)
 				if validgain(tempgain)
 					rowavg += tempgain
 					numvalid += 1
-					push!(samples[i], tempgain)
 				end
 			end
 			meangains[i] = rowavg / numvalid
 		end
 
-		# We now have all the data structures we need
 		return new(angles, meangains, samples)
 	end
-
-	# Constructor using the angles and a vector of samples for each angles
-	# Computes the mean of each of these samples
-	# TODO: Should I check if the gains are valid?
-	function GainPattern{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{Vector{T2}})
-
-		# Compute the mean of each vector of samples
-		num_angles = length(angles)
-		meangains = Array(Float64, num_angles)
-		for i = 1:num_angles
-			meangains[i] = mean(gains[i])
+function refine(samples::Vector{Vector{Float64}})
+	# Calculate number of angles and create required data structures
+	num_angles = length(samples)
+	refined_samples = Array(Vector{Float64}, num_angles)
+	meangains = Array(Float64, num_angles)
+	# Loop through all sample vectors, 
+	#  eliminating invalid gain values and calculating the mean
+	for i = 1:num_angles
+		refined_samples[i] = Array(Float64, 0)
+		rowavg = 0.0
+		numvalid = 0
+		num_samples = length(samples[i])
+		for j = 1:num_samples
+			tempgain = samples[i][j]
+			push!(refined_samples[i], tempgain)
+			if validgain(tempgain)
+				rowavg += tempgain
+				numvalid += 1
+			end
 		end
-
-		# Return new gain pattern with the given angles, means, and samples
-		return new(angles, meangains, gains)
+		meangains[i] = rowavg / numvalid
 	end
+	return meangains, refined_samples
+end
 
 	# Create gain pattern from samples
 	# First, we refine the samples (remove invalid entries, compute mean)
@@ -132,7 +139,6 @@ type GainPattern
 			samples[i] = tempvec
 		end
 
-		# Call the constructor 
 		return GainPattern(angles, samples)
 	end
 
@@ -145,8 +151,8 @@ end # type GainPattern
 # If this is the value of the gain, I know it is not valid
 # The user can override this to meet their own data needs
 function validgain(gain::Real)
-	nullobs = 2147483647.
-	gain == nullobs ? false : true
+	#nullobs = 2147483647.
+	gain == _nullobs ? false : true
 end
 
 
@@ -168,10 +174,10 @@ function refine(samples::Vector{Vector{Float64}})
 		num_samples = length(samples[i])
 		for j = 1:num_samples
 			tempgain = samples[i][j]
+			push!(refined_samples[i], tempgain)
 			if validgain(tempgain)
 				rowavg += tempgain
 				numvalid += 1
-				push!(refined_samples[i], tempgain)
 			end
 		end
 		meangains[i] = rowavg / numvalid
@@ -204,15 +210,23 @@ function -(gp1::GainPattern, gp2::GainPattern)
 		if length(gp1.samples[i]) != length(gp2.samples[i])
 			same_sample_length = false
 		end
-		gains[i] = gp1.meangains[i] - gp2.meangains[i]
+		gains[i] = gp1.meangains[i] + gp2.meangains[i]
 	end
 
-	# If the samples are all the same length, subtract them
+	# If the samples are all the same length, add them
 	# Otherwise, just create a new gain pattern with the calculated means
 	samples = Array(Vector{Float64}, num_angles)
 	if same_sample_length
 		for i = 1:num_angles
-			samples[i] = gp1.samples[i] - gp2.samples[i]
+			#samples[i] = gp1.samples[i] + gp2.samples[i]
+			samples[i] = Array(Float64, 0)
+			for j = 1:length(gp1.samples[1])
+				if !validgain(gp1.samples[i][j]) || !validgain(gp2.samples[i][j])
+					push!(samples[i], _nullobs)
+				else
+					push!(samples[i], gp1.samples[i][j] - gp2.samples[i][j])
+				end
+			end
 		end
 		gp_new = GainPattern(gp1.angles, samples)
 	else
@@ -224,7 +238,8 @@ end
 
 
 # Addition function for gain patterns.
-# Identical to subtraction, except for + sign in a few spots instaed of -
+# Identical to subtraction, except for + sign in a few spots instead of -
+# Leave invalid observations alone
 function +(gp1::GainPattern, gp2::GainPattern)
 	num_angles1 = length(gp1.angles)
 	num_angles2 = length(gp2.angles)
@@ -249,7 +264,15 @@ function +(gp1::GainPattern, gp2::GainPattern)
 	samples = Array(Vector{Float64}, num_angles)
 	if same_sample_length
 		for i = 1:num_angles
-			samples[i] = gp1.samples[i] + gp2.samples[i]
+			#samples[i] = gp1.samples[i] + gp2.samples[i]
+			samples[i] = Array(Float64, 0)
+			for j = 1:length(gp1.samples[1])
+				if !validgain(gp1.samples[i][j]) || !validgain(gp2.samples[i][j])
+					push!(samples[i], _nullobs)
+				else
+					push!(samples[i], gp1.samples[i][j] + gp2.samples[i][j])
+				end
+			end
 		end
 		gp_new = GainPattern(gp1.angles, samples)
 	else
@@ -261,12 +284,17 @@ end
 
 
 # Adding a constant term to a gain pattern
+# Leave any invalid observations alone
 function +(gp::GainPattern, c::Real)
 	gp_new = deepcopy(gp)
 	num_angles = length(gp.angles)
 	for i = 1:num_angles
 		gp_new.meangains[i] += c
-		gp_new.samples[i] += c
+		for j = 1:length(gp_new.samples[i])
+			if validgain(gp_new.samples[i][j])
+				gp_new.samples[i][j] += c
+			end
+		end
 	end
 
 	return gp_new
@@ -277,8 +305,6 @@ end
 
 # Appends the samples of gp2 to the samples vector of gp1
 # Recalculates the mean gains of gp1
-#
-# Assumes that all the samples in the gain patterns are valid
 function addsamples!(gp1::GainPattern, gp2::GainPattern)
 	@assert gp1.angles == gp2.angles
 	num_angles = length(gp1.angles)
@@ -286,8 +312,9 @@ function addsamples!(gp1::GainPattern, gp2::GainPattern)
 		for j = 1:length(gp2.samples[i])
 			push!(gp1.samples[i], gp2.samples[i][j])
 		end
-		gp1.meangains[i] = mean(gp1.samples[i])
 	end
+	meangains, refined_samples = refine(gp1.samples)
+	gp1.meangains = meangains
 end
 
 
@@ -318,7 +345,7 @@ end
 
 # Calculates mean and standard deviation of meangains
 # Applies the normalization (x-m) / s
-# Also applies normalization to each of the samples
+# Also applies normalization to each of the samples, but only valid ones
 function normalize!(gp::GainPattern)
 	m = mean(gp.meangains)
 	s = std(gp.meangains)
@@ -327,7 +354,9 @@ function normalize!(gp::GainPattern)
 	for i = 1:num_angles
 		gp.meangains[i] = (gp.meangains[i]-m)/s
 		for j = 1:length(gp.samples[i])
-			gp.samples[i][j] = (gp.samples[i][j] - m) / s
+			if validgain(gp.samples[i][j])
+				gp.samples[i][j] = (gp.samples[i][j] - m) / s
+			end
 		end
 	end
 end
@@ -388,6 +417,8 @@ function sampleGains(gains, step::Int64, bearing::Int64)
 	return sampled_gains, antenna_angles
 end
 
+
+
 # Function carries out cross-correlation to determine the bearing
 # angles is the vector of angles corresponding to the samples
 #
@@ -398,13 +429,21 @@ end
 # The idea is that the reference is of length 360, 
 #  but the sample need not be.
 # Therefore, a vector of sampled angles is provided.
-function crosscorrelate(ref::Vector{Float64}, sample::Vector{Float64}, angles)
-	shifts = [0:359]
-	cs = zeros(length(shifts))
-	for shift in shifts
-		cs[shift+1] = cc_helper(shift, ref, sample, angles)
+# TODO: handle null observations
+# TODO: give this a thorough scrubbing. It is important to me that it works
+function bearing_cc(angles, gains, ref_angles, ref_gains)
+	cval = 0.0
+	max_cval = -100000
+	max_i = 0.0
+
+	for i = 0:359
+		cval = cross_correlate(angles, gains, ref_angles, ref_gains, i)
+		if (cval > max_cval)
+			max_cval = cval
+			max_i = i
+		end
 	end
-	return cs
+	return 360.0 - max_i
 end
 
 
@@ -412,15 +451,43 @@ end
 # This is the cross-correlation function used in Graefenstein 2009
 # Inputs are:
 #	rarkk
-function cc_helper(shift, ref, sample, angles)
-	i = 1
-	c = 0
-	for deg in angles
-		c += sample[i] * ref[mod(deg - shift, 360) + 1]
-		i += 1
+function cross_correlate(angles, gains, ref_angles, ref_gains, shift)
+	c = 0.0
+	len = length(angles)
+	for i = 1:len
+		c += gains[i] * interp_gain(angles[i], shift, ref_angles, ref_gains)
 	end
 	return c
 end
+
+function interp_gain(angle, shift, ref_angles, ref_gains)
+	# Add the shift to the desired angle, be sure to mod it
+	angle = mod(angle+shift, 360)
+
+	# Find the two ref_angles this is between
+	ref_len = length(ref_angles)
+
+	# final i value will be between i, i+1
+	# find the i value that works...
+	# this is index of lower close value
+	i = 1
+	while (i < ref_len) && (angle > ref_angles[i+1])
+		i += 1
+	end
+
+	#if i == ref_len, between last and first
+	if i == ref_len
+		val = (360.0 - angle) * ref_gains[i]
+		val += (angle - ref_angles[i]) * ref_gains[1]
+		val = val / (360.0 - ref_angles[i])
+	else
+		val = (ref_angles[i+1] - angle) * ref_gains[i]
+		val += (angle - ref_angles[i]) * ref_gains[i+1]
+		val = val / (ref_angles[i+1] - ref_angles[i])
+	end
+	return val
+end
+
 
 ###########################################################################
 # PLOTTING
