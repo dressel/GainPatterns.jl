@@ -1,14 +1,9 @@
 # GainPatterns
 
-This package allows the plotting and manipulation of gain patterns. 
+This package allows manipulation of gain patterns.
 A gain pattern is a collection of gains (or strengths) versus angle.
 If you have a vector of angles, and a vector of gains taken at these angles, you can create a GainPattern.
-You can then create publication-ready plots of these gain patterns using PGF.
-
-I made this package because I was finding it tedious to create these plots.
-PGF allows you to make polar plots, but you can't have negative values.
-This means you have to shift all gains so the lowest one is zero, and then shift the axis labels back.
-This package takes care of all that.
+You can then create publication-ready plots of these gain patterns using PGF with the GainPatternsTex.jl package.
 
 This package also allows you to manipulate gain patterns as well.
 For example, you can normalize a gain pattern (subtract mean gain from every element, and divide by std deviation).
@@ -21,9 +16,7 @@ That is, given some antenna configuration, this will not calculate what the gain
 That would be useful, but is outside the scope of this package (for now).
 At the moment, the package is mostly a plotting tool.
 
-## Requirements
-You need the Julia package PGFPlots to generate the plots.
-PGFPlots requires you to have LaTeX set up on your computer.
+If you would like to plot GainPatterns, check out the GainPatternsTex.jl package.
 
 ## Creating GainPatterns
 A GainPattern has three fields:
@@ -37,46 +30,6 @@ First column is angles, second column is meangains.
 csv(gp)						# saves file to temp.csv
 csv(gp, "filename.csv")		# saves file to filename.csv
 ```
-
-## Plotting
-A brief overview is shown here, but check out the [examples](http://nbviewer.ipython.org/github/dressel/GainPatterns.jl/blob/master/doc/GainPatterns.ipynb).
-For some reason, the notebook viewer has been acting oddly in Firefox.
-If the axis labels don't show up in the examples, try looking at the exmples in another browser.
-
-Plots can be created with:
-```
-plot(gp)			# plot single GainPattern
-plot([gp1, gp2])	# plot multiple GainPatterns on same axis
-```
-
-`plot` creates a PolarAxis object (from PGFPlots package).
-Currently, it doesn't show anything to the screen (does show in IJulia notebook though).
-Use PGFPlots's `save` function to save the file as a PDF or tex file.
-
-```
-p = plot(gp)
-save("plot.pdf", p)		# saves plot as pdf
-save("plot.tex", p)		# saves plot as tex file
-```
-
-Optional arguments give you greater control over your plots:
-* `ymin`
-* `ymax`
-* `lastleg` 
-* `style` style (only use if plotting one pattern).
-* `styles` Vector of possible LaTeX styles (use if plotting multiple patterns).
-* `showsamples`
-* `degrees` Set this to true if you want the angles to have degrees.
-* `legendentries` Vector of strings. Length must match length of vector of GainPatterns to plot.
-
-In Julia, optional arguments require you to include the argument name.
-Order does not matter.
-```
-plot(gp, ymin=-100)
-plot([gp1,gp2], legendentires=["plot1", "plot2"], degrees=true)
-```
-
-
 
 ## Available Manipulations
 On top of plotting, you can perform the following manipulations on a GainPattern.

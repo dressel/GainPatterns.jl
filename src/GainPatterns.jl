@@ -1,12 +1,10 @@
 module GainPatterns
 
 # package code goes here
-export GainPattern, validgain, plot, rotate!
-export normalize, normalize!, sampleGains, bearing_cc, addsamples!, csv
-export PolarAxis, save, Axis
-import PGFPlots: PolarAxis, Plots, save, Axis
 import StatsBase.sample
-export sample
+export GainPattern, validgain, rotate!
+export bearing_ls, bearing_cc, bearing_mle
+export sample, rotate!, csv, normalize, normalize!, addsamples!, sampleGains
 
 _nullobs = 2147483647.
 
@@ -391,6 +389,9 @@ end
 
 
 
+###########################################################################
+# Cross-correlation
+###########################################################################
 # Function carries out cross-correlation to determine the bearing
 # angles is the vector of angles corresponding to the samples
 #
@@ -419,6 +420,35 @@ function bearing_cc(angles, gains, ref_angles, ref_gains)
 	return 360.0 - max_i
 end
 
+function bearing_cc(angles, gains, ref_file::String)
+	ref_gp = GainPattern(ref_file)
+	return bearing_cc(angles, gains, ref_gp.angles, ref_gp.meangains)
+end
+
+# Returns array of bearing values
+# Go through all samples in test_file
+# Assumes all samples are the same length in test_gp
+function bearing_cc(test_file::String, ref_file::String)
+	test_gp = GainPattern(test_file)
+	ref_gp = GainPattern(ref_file)
+
+	num_samples = length(test_gp.angles)
+	num_exp = length(test_gp.samples[1])
+
+	aoa_array = zeros(num_exp)
+	angles = zeros(num_samples)
+	gains = zeros(num_samples)
+	for i = 1:num_exp
+		for j = 1:num_samples
+			# Loop through all samples in this experiment...
+			angles[j] = test_gp.angles[j]
+			gains[j] = test_gp.samples[j][i]
+		end
+		aoa_array[i] = bearing_cc(angles, gains, ref_gp.angles, ref_gp.meangains)
+	end
+	return aoa_array
+end
+
 
 # Helper function to perform cross-correlation
 # This is the cross-correlation function used in Graefenstein 2009
@@ -428,31 +458,118 @@ function cross_correlate(angles, gains, ref_angles, ref_gains, shift)
 	len = length(angles)
 	for i = 1:len
 		if validgain(gains[i])
-			c += gains[i] * interp_gain(angles[i], shift, ref_angles, ref_gains)
+			c += gains[i] * interp_linear(angles[i], shift, ref_angles, ref_gains)
 		end
 	end
 	return c
 end
 
+###########################################################################
+# Least-squares
+###########################################################################
+function bearing_ls(angles, gains, ref_angles, ref_gains)
+	@assert length(angles) == length(gains)
+	num_gains = length(gains)
+	best_err = Inf
+	best_shift = 0
+	for shift = 0:359
+		err = 0.0
+		for j = 1:num_gains
+			if validgain(gains[j])
+				ref_gain = interp_linear(angles[j], shift, ref_angles, ref_gains)
+				err += (gains[j] - ref_gain)^2
+			end
+		end
+		if err < best_err
+			best_err = err
+			best_shift = shift
+		end
+	end
+	return 360 - best_shift
+end
 
-# I think this is just nearest neighbor interpolation
-function interp_gain(angle, shift, ref_angles, ref_gains)
+# TODO: allow you to specify how many units
+# TODO: allow you to specify sense
+function bearing_ls(dir_file::String, omni_file::String, ref_file::String)
+	test_gp = GainPattern(dir_file) - GainPattern(omni_file) + 5
+	ref_gp = GainPattern(ref_file)
+
+	num_samples = length(test_gp.angles)
+	num_exp = length(test_gp.samples[1])
+
+	aoa_array = zeros(num_exp)
+	angles = zeros(num_samples)
+	gains = zeros(num_samples)
+	for i = 1:num_exp
+		for j = 1:num_samples
+			# Loop through all samples in this experiment...
+			angles[j] = test_gp.angles[j]
+			gains[j] = test_gp.samples[j][i]
+		end
+		aoa_array[i] = bearing_ls(angles, gains, ref_gp.angles, ref_gp.meangains)
+	end
+	return aoa_array
+end
+
+
+###########################################################################
+# MLE
+###########################################################################
+# TODO: ensure that you are within bounds for obs_matrix indices
+function bearing_mle(angles, gains, obs_matrix, min_gain)
+	@assert length(angles) == length(gains)
+	null_index = size(obs_matrix, 2)
+	num_gains = length(gains)
+	best_prob = 0.0
+	best_shift = -1
+	for shift = 0:359
+		prob = 1.0
+		for j = 1:num_gains
+			# Converting theta_rel to index
+			theta_rel = angles[j] - shift
+			if theta_rel < 0
+				theta_rel += 360
+			end
+			theta_rel = mod(int(theta_rel/10.0), 36) + 1
+			if validgain(gains[j])
+				# Convert gain to index
+				index = max(gains[j] - min_gain + 1, 1)
+			else
+				index = null_index
+			end
+			prob *= max(obs_matrix[theta_rel, index], 1e-6)
+		end
+		if prob > best_prob
+			best_prob = prob
+			best_shift = shift
+		end
+	end
+	return best_shift
+end
+
+
+###########################################################################
+# INTERPOLATION
+# Assumes ref_angles always given in 0-360 order
+# First ref_angle will always be zero, but last will be less than 360
+###########################################################################
+# Finds the value (from ref_gains) at angle + shift
+# Looks like linear interpolation to me
+function interp_linear(angle, shift, ref_angles, ref_gains)
 	# Add the shift to the desired angle, be sure to mod it
 	angle = mod(angle+shift, 360)
 
 	# Find the two ref_angles this is between
-	ref_len = length(ref_angles)
-
 	# final i value will be between i, i+1
-	# find the i value that works...
 	# this is index of lower close value
 	i = 1
+	ref_len = length(ref_angles)
 	while (i < ref_len) && (angle > ref_angles[i+1])
 		i += 1
 	end
 
-	#if i == ref_len, between last and first
 	if i == ref_len
+		# Between last and first ref_angles
 		val = (360.0 - angle) * ref_gains[i]
 		val += (angle - ref_angles[i]) * ref_gains[1]
 		val = val / (360.0 - ref_angles[i])
@@ -464,127 +581,39 @@ function interp_gain(angle, shift, ref_angles, ref_gains)
 	return val
 end
 
+function interp_nearest(angle, shift, ref_angles, ref_gains)
 
-###########################################################################
-# PLOTTING
-###########################################################################
-# Returns the PolarAxis object containing a plot of the gain pattern
-function plot(gp::GainPattern; ymin::Real=0.0, ymax=nothing, showsamples::Bool=false, lastleg::Bool=true, style=nothing, degrees::Bool=false)
-	plot([gp], ymin=ymin, ymax=ymax, showsamples=showsamples, lastleg=lastleg, styles=[style],degrees=degrees)
-end
-
-function plot(gp_array::Vector{GainPattern}; ymin::Real=0.0, ymax=nothing, showsamples::Bool=false, lastleg::Bool=true, legendentries=nothing, colors=nothing, styles=nothing, degrees::Bool=false)
-
-	# Create an array with length of angles for each gain pattern
-	# Create an array with minimum mean gain for each pattern
-	# Initialize the minimum_gain to the lowest of these minimum gains
-	num_gp = length(gp_array)
-	mingain_array = zeros(num_gp)
-	nangles_array = zeros(Int, num_gp)
-	for i = 1:num_gp
-		nangles_array[i] = length(gp_array[i].angles)
-		mingain_array[i] = minimum(gp_array[i].meangains)
+	# Determine angle and ref_angle indices it falls between
+	angle = mod(angle+shift, 360)
+	i = 1
+	ref_len = length(ref_angles)
+	while (i < ref_len) && (angle > ref_angles[i+1])
+		i += 1
 	end
-	mingain = minimum(mingain_array)
 
-	# Currently, only plot samples for one gain pattern
-	# TODO: Don't allow legend entries for showing samples
-	#  Or do, but it has to be done well...
-	if showsamples && (num_gp == 1)
-		gp = gp_array[1]
-		for i = 1:nangles_array[1]
-			tempmin = minimum(gp.samples[i])
-			mingain = (tempmin < mingain ? tempmin : mingain)
-		end
-
-		ymin = min(ymin, mingain, 0.0)
-		if typeof(ymax) != Nothing
-			ymax -= ymin
-			emsg = "ymax is smaller than smallest gain, 0, and specified ymin"
-			ymax < ymin ? error(emsg) : nothing
-		end
-
-		gain_plot = plotgains(gp.angles, gp.meangains, ymin, lastleg)
-		plot_array = plotsamples(gp.angles, gp.samples, ymin)
-		push!(plot_array, gain_plot)
-		pa = PolarAxis(plot_array, ymax=ymax, yticklabel="{\\pgfmathparse{$ymin+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}")
-	else
-		ymin = min(ymin, mingain, 0.0)
-		if typeof(ymax) != Nothing
-			ymax -= ymin
-			emsg = "ymax is smaller than smallest gain, 0, and specified ymin"
-			ymax < ymin ? error(emsg) : nothing
-		end
-
-		# legendentries, styles must be indexable
-		if legendentries == nothing
-			legendentries = Array(Nothing, num_gp)
-		end
-		if styles == nothing
-			styles = Array(Nothing, num_gp)
-		end
-
-		# Do we include the degrees
-		if degrees
-			xtl = "{\$\\pgfmathprintnumber{\\tick}^{\\circ}\$}"
+	if i == ref_len
+		# between last ref_angle and first ref_angle
+		d1 = abs(ref_angles[i] - angle)
+		d2 = abs(360 - angle)
+		if d2 > d1
+			val = ref_gains[i]
 		else
-			xtl = nothing
+			val = ref_gains[1]
 		end
-
-		plot_array = Array(Plots.Linear, num_gp)
-		for i = 1:num_gp
-			gp = gp_array[i]
-			plot_array[i] = plotgains(gp.angles, gp.meangains, ymin, lastleg, legendentries[i], styles[i])
+	else
+		# Determine which you are closer too...
+		d1 = abs(ref_angles[i] - angle)
+		d2 = abs(ref_angles[i+1] - angle)
+		if d2 > d2
+			val = ref_gains[i]
+		else
+			val = ref_gains[i+1]
 		end
-		#xticklabel=$\pgfmathprintnumber{\tick}^\circ$
-		pa = PolarAxis(plot_array, ymax=ymax, yticklabel="{\\pgfmathparse{$ymin+\\tick} \\pgfmathprintnumber{\\pgfmathresult}}", xticklabel=xtl)
-
 	end
-
-	# Return the polar axis object
-	return pa
-
+	return val
 end
 
-# Creates Plots.Linear object (from PGFPlots) with gains vs angles
-# Can handle negative values, which radial plots normally cannot.
-#
-# ymin = minimum y (gain or radial) value. If it is positive, it is ignored.
-#  If it is less than the minimum value of gains, also ignored.
-function plotgains{T1<:Real,T2<:Real}(angles::Vector{T1}, gains::Vector{T2}, ymin::Real, lastleg::Bool, legendentry, style)
 
-	# Make copies before we make some changes
-	# Remember to shift gains by the minimum value to be plotted
-	plot_gains = copy(gains) - ymin
-	plot_angles = copy(angles)
-
-	# Last point must be same as first point to complete the plot
-	# If not, it will be missing a section between last point and first
-	if (angles[1] != angles[end]) && lastleg
-		push!(plot_angles, plot_angles[1])
-		push!(plot_gains, plot_gains[1])
-	end
-
-	# Create a linear plot and return it
-	#return Plots.Linear(plot_angles, plot_gains, mark="none", style="red,thick")
-	return Plots.Linear(plot_angles, plot_gains, mark="none", legendentry=legendentry, style=style)
-end
-
-# Returns an array of plots
-function plotsamples{T1<:Real,T2<:Real}(angles::Vector{T1}, samples::Vector{Vector{T2}}, ymin::Real)
-
-	# Create an array of plots
-	num_angles = length(angles)
-	plot_array = Array(Plots.Linear, num_angles)
-
-	# Create a linear plot for each sample
-	for i = 1:num_angles
-		plot_array[i] = Plots.Linear(angles[i]*ones(length(samples[i])), samples[i]-ymin, mark="x", style="blue,smooth")
-	end
-
-	# Return the array of plots
-	return plot_array
-end
 
 # Writes a gain pattern to a file
 # TODO: check that the file exists
@@ -612,6 +641,11 @@ function csv(gp::GainPattern, filename::String="temp.csv"; samples=true)
 	close(outfile)
 end
 
+
+###########################################################################
+# EXTREMA
+# I don't remember what I used this for, but it appears unused
+###########################################################################
 # Finds minimum and maximum gains in gain pattern's samples, in one sweep
 # Checks if each gain is valid
 # I don't know how I feel about that...
