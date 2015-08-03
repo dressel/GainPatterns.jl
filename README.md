@@ -24,6 +24,13 @@ A GainPattern has three fields:
 * `meangains`, a vector of the gains. `meangains[i]` is the gain measured at `angles[i]`,
 * `samples`, a vector of the samples.
 
+You can create a gain pattern with the samples.
+You can also create a gain pattern from a csv file, where the first column is the angles at which measurements were taken (in degrees, 0-359), and any subsequent columns are gain values taken at those degrees.
+```
+gp1 = GainPattern(angles, gains)
+gp2 = GainPattern("file.csv")
+```
+
 A GainPattern can be saved to a csv file using `csv`.
 First column is angles, second column is meangains.
 ```
