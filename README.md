@@ -77,6 +77,21 @@ addsamples!(gp1, gp2)
 ```
 This will add the append the saples of gp2 to the samples of gp1.
 
+## Bearing Calculation
+
+
+#### Max
+Assumes you only have one sample (only looks at meangains). Returns angle corresponding to maximum meangains value. If there are multiple instances of this maximum value, this returns the angle corresponding to the first.
+```
+bearing_max(gp::GainPattern)
+```
+
+##### Cross-correlation
+```
+bearing_cc(test_file, ref_file)
+bearing_cc()
+```
+
 ## Near-Term Plans
 This is currently still very rough. Some things I want to add:
 * Overhaul documentation and create Julia notebook with examples
