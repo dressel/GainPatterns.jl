@@ -3,8 +3,9 @@ module GainPatterns
 # package code goes here
 import StatsBase.sample
 export GainPattern, validgain, rotate!
-export angular_error
-export bearing_ls, bearing_cc, bearing_mle, bearing_sls
+export angular_error, angular_error_rel
+export bearing_ls, bearing_cc, bearing_mle, bearing_sls, bearing_max
+export bearing_ccn
 export sample, rotate!, csv, normalize, normalize!, addsamples!, sampleGains
 
 _nullobs = 2147483647.
@@ -384,6 +385,36 @@ function angular_error{T<:Real}(angle1::Real, angles2::Vector{T})
 	return angular_error(angles2, angle1)
 end
 
+# OLD! Inaccurate!
+function angular_error_relold{T1<:Real, T2<:Real}(v1::Vector{T1}, v2::Vector{T2})
+	err_arr = v1 - v2
+	temp = v1 - (360 + v2)
+	indy = abs(temp) .< abs(err_arr)
+	err_arr[indy] = temp[indy]
+	return err_arr
+end
+
+# Finds the shortest distance between points, but preserves a sign
+# say v2[i] = 30, v1[i] = 15 => ans[i] = 15
+# say v2[i] = 15, v1[i] = 30 => ans[i] = -15
+function angular_error_rel{T1<:Real, T2<:Real}(v1::Vector{T1}, v2::Vector{T2})
+	eps_val = 1e-6
+	ref = angular_error(v1, v2)
+	len = length(v1)
+	for i = 1:len
+		if abs(v2[i] - v1[i] - ref[i]) < eps_val
+			# we know it is positive
+			ref[i] = ref[i]
+		elseif abs(360 + v2[i] - v1[1] - ref[i]) < eps_val
+			ref[i] = ref[i]
+		else
+			ref[i] = -ref[i]
+		end
+
+	end
+	return ref
+end
+
 
 ###########################################################################
 # SAMPLING
@@ -433,6 +464,23 @@ end
 
 
 
+# Assumes gp only has one sample (looks at meangains)
+# Doesn't handle null obs... does it have to?
+function bearing_max(gp::GainPattern)
+	num_angles = length(gp.angles)
+	temp_max = -Inf
+	max_bearing = 0
+	for i = 1:num_angles
+		if validgain(gp.meangains[i])
+			if gp.meangains[i] > temp_max
+				temp_max = gp.meangains[i]
+				max_bearing = gp.angles[i]
+			end
+		end
+	end
+	return max_bearing
+end
+
 ###########################################################################
 # Cross-correlation
 ###########################################################################
@@ -463,6 +511,24 @@ function bearing_cc(angles, gains, ref_angles, ref_gains)
 	end
 	return 360.0 - max_i
 end
+# returns max correlation coefficient
+function bearing_ccn(angles, gains, ref_angles, ref_gains)
+	cval = 0.0
+	max_cval = -Inf
+	max_i = 0.0
+
+	norm_gains = copy(gains)
+	normalize!(norm_gains)
+
+	for i = 0:359
+		cval = cross_correlate(angles, norm_gains, ref_angles, ref_gains, i)
+		if (cval > max_cval)
+			max_cval = cval
+			max_i = i
+		end
+	end
+	return max_cval
+end
 
 function bearing_cc(angles, gains, ref_file::String)
 	ref_gp = GainPattern(ref_file)
@@ -489,6 +555,27 @@ function bearing_cc(test_file::String, ref_file::String)
 			gains[j] = test_gp.samples[j][i]
 		end
 		aoa_array[i] = bearing_cc(angles, gains, ref_gp.angles, ref_gp.meangains)
+	end
+	return aoa_array
+end
+
+function bearing_ccn(test_file::String, ref_file::String)
+	test_gp = GainPattern(test_file)
+	ref_gp = GainPattern(ref_file)
+
+	num_samples = length(test_gp.angles)
+	num_exp = length(test_gp.samples[1])
+
+	aoa_array = zeros(num_exp)
+	angles = zeros(num_samples)
+	gains = zeros(num_samples)
+	for i = 1:num_exp
+		for j = 1:num_samples
+			# Loop through all samples in this experiment...
+			angles[j] = test_gp.angles[j]
+			gains[j] = test_gp.samples[j][i]
+		end
+		aoa_array[i] = bearing_ccn(angles, gains, ref_gp.angles, ref_gp.meangains)
 	end
 	return aoa_array
 end
