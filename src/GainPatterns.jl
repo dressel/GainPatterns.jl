@@ -81,7 +81,7 @@ type GainPattern
 	# Create gain pattern from csv file
 	# Assumes first column is angles
 	# This cuts out any null observations..
-	function GainPattern(datafile::String)
+	function GainPattern(datafile::AbstractString)
 
 		# Read the data, creating the angles vector and an array of data
 		alldata = readcsv(datafile)
@@ -530,7 +530,7 @@ function bearing_ccn(angles, gains, ref_angles, ref_gains)
 	return max_cval
 end
 
-function bearing_cc(angles, gains, ref_file::String)
+function bearing_cc(angles, gains, ref_file::AbstractString)
 	ref_gp = GainPattern(ref_file)
 	return bearing_cc(angles, gains, ref_gp.angles, ref_gp.meangains)
 end
@@ -538,7 +538,7 @@ end
 # Returns array of bearing values
 # Go through all samples in test_file
 # Assumes all samples are the same length in test_gp
-function bearing_cc(test_file::String, ref_file::String)
+function bearing_cc(test_file::AbstractString, ref_file::AbstractString)
 	test_gp = GainPattern(test_file)
 	ref_gp = GainPattern(ref_file)
 
@@ -559,7 +559,7 @@ function bearing_cc(test_file::String, ref_file::String)
 	return aoa_array
 end
 
-function bearing_ccn(test_file::String, ref_file::String)
+function bearing_ccn(test_file::AbstractString, ref_file::AbstractString)
 	test_gp = GainPattern(test_file)
 	ref_gp = GainPattern(ref_file)
 
@@ -622,7 +622,7 @@ end
 # Uses least-square method
 # samples is how many samples you want to use (maybe you dont want whole rotation)
 # sense is direction of rotation: -1 for negative sense, 1 for positive sense
-function bearing_ls(dir_file::String, omni_file::String, ref_file::String; samples::Int64=0, sense::Int64=1)
+function bearing_ls(dir_file::AbstractString, omni_file::AbstractString, ref_file::AbstractString; samples::Int64=0, sense::Int64=1)
 	test_gp = GainPattern(dir_file) - GainPattern(omni_file) + 5
 	ref_gp = GainPattern(ref_file)
 
@@ -695,7 +695,7 @@ function bearing_sls(angles, gains, ref_angles, ref_gains)
 	return 360 - best_shift
 end
 
-function bearing_sls(dir_file::String, ref_file::String; samples::Int64=0, sense::Int64=1)
+function bearing_sls(dir_file::AbstractString, ref_file::AbstractString; samples::Int64=0, sense::Int64=1)
 	test_gp = GainPattern(dir_file)
 	ref_gp = GainPattern(ref_file)
 
@@ -845,7 +845,7 @@ end
 # TODO: check that the file exists
 # TODO: Check that they add csv file extension if not, add it
 # Currently only prints out meangains, but could theoretically do samples too
-function csv(gp::GainPattern, filename::String="temp.csv"; samples=true)
+function csv(gp::GainPattern, filename::AbstractString="temp.csv"; samples=true)
 	num_angles = length(gp.angles)
 	outfile = open(filename, "w")
 
