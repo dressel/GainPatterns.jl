@@ -92,6 +92,26 @@ bearing_cc(test_file, ref_file)
 bearing_cc()
 ```
 
+## Angular Error
+```
+angular_error(-5, 5)		# returns 10
+angular_error(5, -5)		# returns 10
+
+angular_error(340, 17)		# returns 37
+angular_error(17, 340)		# returns 37
+
+angular_error(340, -17)		# returns 3
+angular_error(-17, 340)		# returns 3
+```
+NOTE: The angles provided must be within 360 degrees of each other or you will get odd behavior.
+Any of the examples above are ok, but if you did `angular_error(5, 720)`, you will get 355 instead of 5 (the correct answer is 5).
+I will take care of this some day
+
+You can also call `angular_error` on vectors.
+
+You can also compute the relative error with `angular_error_rel`, which preserves a sign to indicate direction.
+I have not fully implemented this yet.
+
 ## Near-Term Plans
 This is currently still very rough. Some things I want to add:
 * Overhaul documentation and create Julia notebook with examples
