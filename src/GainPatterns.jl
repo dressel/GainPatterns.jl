@@ -25,6 +25,8 @@ type GainPattern
 	# The samples array uses the single gain at each angle as that gain
 	# TODO: check that these gains are valid
 	# TODO: just don't insert that entry if invalid
+	# WHY DO I MAKE IT A NAN??
+	# Maybe it isn't totally useless info?
 	function GainPattern(angles::Vector{Float64}, gains::Vector{Float64})
 
 		# Error if the angles and gains vectors are of different lengths
@@ -34,16 +36,22 @@ type GainPattern
 
 		# Create samples vectors from gains
 		num_gains = length(gains)
-		samples = Array(Vector{Float64}, num_gains)
+		#samples = Array(Vector{Float64}, num_gains)
+		samples = Array(Vector{Float64}, 0)
+		new_angles = Array(Float64, 0)
+		new_gains = Array(Float64, 0)
 		for i = 1:num_gains
 			if validgain(gains[i])
-				samples[i] = [gains[i]]
+				push!(samples, [gains[i]])
+				push!(new_angles, angles[i])
+				push!(new_gains, gains[i])
+				#samples[i] = [gains[i]]
 			else
-				samples[i] = []
-				gains[i] = NaN
+				#samples[i] = []
+				#gains[i] = NaN
 			end
 		end
-		return new(angles, gains, samples)
+		return new(new_angles, new_gains, samples)
 	end
 
 	# Constructor taking in only angles and mean gains
@@ -77,7 +85,6 @@ type GainPattern
 		return new(angles, meangains, refined_samples)
 	end
 
-
 	# Create gain pattern from csv file
 	# Assumes first column is angles
 	# This cuts out any null observations..
@@ -88,22 +95,12 @@ type GainPattern
 		angles = float(alldata[:, 1])
 		gains = alldata[:, 2:end]
 
-		# Create a vector containing samples
-		num_angles = length(angles)
-		samples = Array(Vector{Float64}, num_angles)
-
-		# Create a vector for each sample from the matrix of data
-		# If some angles have fewer samples, we will have empty quotes, ""
-		# We assume that these are after the actual samples
-		for i = 1:num_angles
-			tempvec = vec(gains[i,:])
-			while tempvec[end] == ""
-				pop!(tempvec)
-			end
-			samples[i] = tempvec
+		if size(gains, 2) == 1
+			return GainPattern(angles, vec(gains))
+		else
+			return GainPattern(angles, gains)
 		end
 
-		return GainPattern(angles, samples)
 	end
 
 end # type GainPattern
