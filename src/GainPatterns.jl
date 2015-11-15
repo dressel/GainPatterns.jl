@@ -382,34 +382,32 @@ function angular_error{T<:Real}(angle1::Real, angles2::Vector{T})
 	return angular_error(angles2, angle1)
 end
 
-# OLD! Inaccurate!
-function angular_error_relold{T1<:Real, T2<:Real}(v1::Vector{T1}, v2::Vector{T2})
-	err_arr = v1 - v2
-	temp = v1 - (360 + v2)
-	indy = abs(temp) .< abs(err_arr)
-	err_arr[indy] = temp[indy]
-	return err_arr
-end
-
 # Finds the shortest distance between points, but preserves a sign
 # say v2[i] = 30, v1[i] = 15 => ans[i] = 15
 # say v2[i] = 15, v1[i] = 30 => ans[i] = -15
 function angular_error_rel{T1<:Real, T2<:Real}(v1::Vector{T1}, v2::Vector{T2})
-	eps_val = 1e-6
-	ref = angular_error(v1, v2)
-	len = length(v1)
-	for i = 1:len
-		if abs(v2[i] - v1[i] - ref[i]) < eps_val
-			# we know it is positive
-			ref[i] = ref[i]
-		elseif abs(360 + v2[i] - v1[1] - ref[i]) < eps_val
-			ref[i] = ref[i]
-		else
-			ref[i] = -ref[i]
-		end
-
+	@assert length(v1) == length(v2)
+	err_len = length(v1)
+	err_arr = zeros(err_len)
+	for i = 1:err_len
+		err_arr[i] = angular_error_rel(v1[i], v2[i])
 	end
-	return ref
+	return err_arr
+end
+function angular_error_rel(angle1::Float64, angle2::Float64)
+	eps_val = 1e-6
+	ref = angular_error(angle1, angle2)
+	if abs(angle2 - angle1 - ref) < eps_val
+		# we know it is positive
+		ref = ref
+	elseif abs(360. + angle2 - angle1 - ref) < eps_val
+		ref = ref
+	else
+		ref = -ref
+	end
+end
+function angular_error_rel(angle1::Real, angle2::Real)
+	angular_error_rel(float(angle1), float(angle2))
 end
 
 

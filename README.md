@@ -110,7 +110,14 @@ I will take care of this some day
 You can also call `angular_error` on vectors.
 
 You can also compute the relative error with `angular_error_rel`, which preserves a sign to indicate direction.
-I have not fully implemented this yet.
+The sign is positive if the shortest path is from the first angle and to the second.
+```
+angular_error_rel(5, 355)		# returns -10
+angular_error_rel(355, 5)		# returns 10
+
+angular_error_rel(-17, 340)		# returns -3
+angular_error_rel(340, -17)		# returns 3
+```
 
 ## Near-Term Plans
 This is currently still very rough. Some things I want to add:
