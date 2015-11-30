@@ -5,7 +5,7 @@ import StatsBase.sample
 export GainPattern, validgain, rotate!
 export angular_error, angular_error_rel
 export bearing_ls, bearing_cc, bearing_mle, bearing_sls, bearing_max
-export bearing_ccn
+export bearing_ccn, bearing_half
 export sample, rotate!, csv, normalize, normalize!, addsamples!, sampleGains
 
 _nullobs = 2147483647.
@@ -361,6 +361,11 @@ function angular_error(angle1::Float64, angle2::Float64)
 	end
 	return err
 end
+export tangular_error
+function tangular_error(angle1::Float64, angle2::Float64)
+	temp = angle2 - angle1
+	min( (abs(temp),angle2-angle1), (abs(360.0 + temp),360+temp), (abs(temp-360),temp-360) )[2]
+end
 function angular_error{T<:Real}(angles1::Vector{T}, angles2::Vector{T})
 	angular_error(float(angles1), float(angles2))
 end
@@ -395,16 +400,17 @@ function angular_error_rel{T1<:Real, T2<:Real}(v1::Vector{T1}, v2::Vector{T2})
 	return err_arr
 end
 function angular_error_rel(angle1::Float64, angle2::Float64)
-	eps_val = 1e-6
-	ref = angular_error(angle1, angle2)
-	if abs(angle2 - angle1 - ref) < eps_val
-		# we know it is positive
-		ref = ref
-	elseif abs(360. + angle2 - angle1 - ref) < eps_val
-		ref = ref
-	else
-		ref = -ref
-	end
+	return tangular_error(angle1, angle2)
+	#eps_val = 1e-6
+	#ref = angular_error(angle1, angle2)
+	#if abs(angle2 - angle1 - ref) < eps_val
+	#	# we know it is positive
+	#	ref = ref
+	#elseif abs(360. + angle2 - angle1 - ref) < eps_val
+	#	ref = ref
+	#else
+	#	ref = -ref
+	#end
 end
 function angular_error_rel(angle1::Real, angle2::Real)
 	angular_error_rel(float(angle1), float(angle2))
@@ -588,6 +594,59 @@ function cross_correlate(angles, gains, ref_angles, ref_gains, shift)
 		end
 	end
 	return c
+end
+
+#################################################################
+# half-way point
+#################################################################
+function bearing_half(gp_file::AbstractString, half_val::Real=3)
+	gp = GainPattern(gp_file)
+	return bearing_half(gp)
+end
+function bearing_half(gp::GainPattern, half_val::Real=3)
+
+	# Determine index and value of maximum gain
+	max_idx = indmax(gp.meangains)
+	max_gain = gp.meangains[max_idx]
+	max_angle = gp.angles[max_idx]
+	desired_gain = max_gain - half_val
+
+	# Determine how many angles on a side
+	num_angles = length(gp.angles)
+	side_angles = div(num_angles, 2)
+
+	# Find the -3 db point
+	best_sub = Inf
+	best_add = Inf
+	sub_angle = 0.0
+	add_angle = 0.0
+	for i = 1:side_angles
+		sub_idx = max_idx - i
+		if sub_idx <= 0
+			sub_idx += num_angles
+		end
+		add_idx = max_idx + i
+		if add_idx > num_angles
+			add_idx -= num_angles
+		end
+		if abs(gp.meangains[sub_idx] - desired_gain) < best_sub
+			sub_angle = gp.angles[sub_idx]
+			best_sub = abs(gp.meangains[sub_idx] - desired_gain)
+		end
+		if abs(gp.meangains[add_idx] - desired_gain) < best_add
+			add_angle = gp.angles[add_idx]
+			best_add = abs(gp.meangains[add_idx] - desired_gain)
+		end
+	end
+
+	# return the half way point between the two angles
+	#println("sub_angle = ", sub_angle)
+	#println("add_angle = ", add_angle)
+	ret_angle = add_angle + angular_error_rel(add_angle, sub_angle) / 2.
+	if ret_angle < 0.1
+		ret_angle += 360.0
+	end
+	return ret_angle
 end
 
 ###########################################################################
