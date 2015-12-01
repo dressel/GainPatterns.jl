@@ -1,8 +1,8 @@
 ######################################################################
 # bearing.jl
 # Bearing calculation methods:
-# bearing_cc - 
-# bearing_half
+# bearing_cc		cross correlation 
+# bearing_half		half way point
 ######################################################################
 
 ###########################################################################
@@ -244,6 +244,9 @@ function bearing_sls(dir_file::AbstractString, ref_file::AbstractString; samples
 	return aoa_array
 end
 
+#################################################################
+# maximum bearing method 
+#
 # Assumes gp only has one sample (looks at meangains)
 # Doesn't handle null obs... does it have to?
 function bearing_max(gp::GainPattern)
@@ -260,6 +263,7 @@ function bearing_max(gp::GainPattern)
 	end
 	return max_bearing
 end
+bearing_max(filename::AbstractString) = bearing_max(GainPattern(filename))
 
 
 ###########################################################################
