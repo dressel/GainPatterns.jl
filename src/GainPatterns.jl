@@ -1,7 +1,8 @@
 module GainPatterns
 
-# package code goes here
 import StatsBase.sample
+import Base: +,-
+
 export GainPattern, validgain, rotate!
 export angular_error, angular_error_rel
 export bearing_ls, bearing_cc, bearing_mle, bearing_sls, bearing_max
