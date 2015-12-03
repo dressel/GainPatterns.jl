@@ -8,6 +8,7 @@ export angular_error, angular_error_rel
 export bearing_ls, bearing_cc, bearing_mle, bearing_sls, bearing_max
 export bearing_ccn, bearing_half
 export sample, rotate!, csv, normalize, normalize!, addsamples!, sampleGains
+export samples_stds
 
 _nullobs = 2147483647.
 
@@ -557,6 +558,28 @@ function csv(gp::GainPattern, filename::AbstractString="temp.csv"; samples=true)
 	close(outfile)
 end
 
+# Get standard deviation of the each sample
+# Assumes the meangains value is corrrect (and exists)
+function samples_stds(gp::GainPattern)
+	num_angles = length(gp.angles)
+	stds = zeros(num_angles)
+	for i = 1:num_angles
+		num_samples = length(gp.samples[i])
+		sample_var = 0.0
+		angle_mean = gp.meangains[i]
+		n = 0.0
+		for j = 1:num_samples
+			temp = gp.samples[i][j]
+			if validgain(temp)
+				sample_var += (temp - angle_mean)^2
+				n += 1.0
+			end
+		end
+		stds[i] = sample_var / n
+	end
+	return stds
+end
+
 
 ###########################################################################
 # EXTREMA
@@ -587,7 +610,6 @@ Base.maximum(gp::GainPattern) = extrema(gp)[2]
 Base.minimum(gp::GainPattern) = extrema(gp)[1]
 
 # Methods to compute bearing
-include("bearing.jl")
 include("bearing/cross_correlation.jl")
 include("bearing/half.jl")
 include("bearing/mle.jl")
