@@ -588,6 +588,11 @@ Base.minimum(gp::GainPattern) = extrema(gp)[1]
 
 # Methods to compute bearing
 include("bearing.jl")
-
+include("bearing/cross_correlation.jl")
+include("bearing/half.jl")
+include("bearing/mle.jl")
+include("bearing/least_squares.jl")
+include("bearing/scaled_least_squares.jl")
+include("bearing/max.jl")
 
 end # module
