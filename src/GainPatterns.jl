@@ -577,7 +577,7 @@ function samples_stds(gp::GainPattern)
 		end
 		stds[i] = sample_var / n
 	end
-	return stds
+	return sqrt(stds)
 end
 
 
